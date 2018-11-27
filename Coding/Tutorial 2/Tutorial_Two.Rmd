@@ -1,0 +1,323 @@
+---
+title: 'Tutorial Two: Vectors and Lists'
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='', eval=FALSE)
+```
+
+Vectors and lists both store a sequence of variables, but in slightly different ways. You'll start out by looking at vectors, and at the end, you'll briefly review lists.
+
+# Vectors
+
+Vectors store a sequence of variables, each of which has to be of the same type. For example, you could store the age of each of your participants in a numeric vector, or whether or not they had corrected vision as a logical vector.
+
+## Numeric vectors
+
+The start position coordinates are two single numbers. For the points B and C you will use a vector of X coordinates and a vector of Y coordinates. You create a vector with the `c()` function. I've already created the vector of X coordinates below, and you should complete the vector of Y coordinates:
+
+```{r assign_X_Y_coordinates}
+posX <- c(3, 4)
+posY <- c(0,  )
+```
+
+This gives two vectors, each with two numbers in them, in the order that they were put in the vector:
+
+```{r see_posX_posY}
+posX
+posY
+```
+
+Vectors are a good way to keep many numbers organized in a specific order.
+
+## Vectorized calculations
+
+Vectors can also be used in calculations, where the operation is applied to all elements of the vector.
+
+Try adding a number to the `posY` vector:
+
+```{r posY_plus}
+posY +
+```
+
+Try multiplying `posX` with a number:
+
+```{r posX_times}
+posX *
+```
+
+Try squaring `posY`:
+
+```{r posY_squared}
+posY
+```
+
+You can even use two vectors in one calculation. See what happens when you add `posY` ro `posX`:
+
+```{r add_posY_posX}
+posX + 
+```
+
+Or multiplying the two vectors:
+
+```{r posX_times_posY}
+posX * posY
+```
+
+So apart from storing data in an ordered fashion, another advantage of vectors is that you can do vectorized calculation. For example, you can calculate all the distances from towns to the capital at once. Using the same pythogorean theorem, complete this chunk of code:
+
+```{r calculate_all_distances}
+sqrt((posX-startX)^2 + ( - )^2)
+```
+
+Again, with only two positions, we can easily see which distance is shorter, but if we want to look at our list of 100 cities and towns, we can store the distances in another variable, like this (complete this code):
+
+
+```{r store_all_distances}
+dist <- sqrt(  + (posY-startY)^2)
+```
+
+And we can look at the list of distances by typing `dist`:
+
+```{r see_dist}
+dist
+```
+
+And see which distance is shorter.
+
+Here is an example with longer vectors, that are created by random sampling from a set of possible coordinates (we'll pretend to live in Wyoming, which is not a country, but it is almost rectangular).
+
+```{r sample_random_places}
+posX100 sample(x=c(0,1,3,4,5,6,7,8,9,10,11,12,13,14,15), size=100, replace=TRUE)
+posY100 <- sample(x=c(0,1,2,4,5,6,7,8,9,10,11,12,13), size=100, replace=TRUE)
+```
+
+With this random sampling, some cities might end up on the exact same spot, but to prevent distances to the capitol to be 0, the coordinates (2,3) are left out of the lists (complete the first line).
+
+Let's look at the X coordinates:
+
+```{r show_posX100}
+posX100
+```
+
+Notice that at the start of each line, there is a number in square brackets. This is the index of the first thing that follows on that line. You may have noticed it in the output from the previous code chunks. All the other numbers are the actual content of the `posX100` numeric vector.
+
+We can check how many items there are in the vector with the `length()` function:
+
+```{r vector_length}
+length(posX100)
+```
+
+There are other ways to make vectors, but using `c()` is very common. Apart from putting in the numbers or other data yourself, there are some ways that you can fill a vector automatically:
+
+```{r vector_generation}
+c(1,2,3,4,5)
+c(1:5)
+```
+
+Using `seq()` you can do some more advanced things:
+
+```{r seq}
+seq(from=1, to=5, by=1)
+```
+
+Use the above code to generate a vector with all even numbers between 1 and 11, which would be the same as whatyou get from c(2,4,6,8,10):
+
+```{r}
+seq(   )
+```
+
+You can do much more with this, but for now it's good to know `seq()` exists.
+
+## Vector indexing
+
+While vectors are very useful, sometimes you need to look at a single number, or perhaps a subset of the vector. That's when you need indexing or subsetting. If we only want to see the third number in this vectors, we use the index 3 with square brackets to do so:
+
+```{r index_third}
+posX100[3]
+```
+
+If we want to see the fifth to the tenth number, we can also use indexing with square brackets:
+
+```{r index_fifth_to_tenth}
+posX100[5:10]
+```
+
+Indexing is a great tool that will be used later on. Let's practice it a bit more. First we will get all the even indexes from 2 to 10:
+
+```{r index_even_two_to_ten}
+posX100[c(2,4,6,8,10)]
+```
+
+Or the combination of the third number and the fifth to tenth, fix the error in this code:
+
+```{r index_third_fifth_to_tenth}
+posX100( c(3,5:10) )
+```
+
+
+## More calculations with vectors
+
+Now let's calculate all of these cities distances to the capital:
+
+```{r calculate_100_distances}
+dist100 <- sqrt((posX100-startY)^2 + (posY100-startY)^2)
+dist100
+```
+
+So in 1 line of code, you can calculate 100 distances! Or even more... But now it is not so easy to see the shortest distance to the capital anymore. Of course there is a solution. R can give you the minimum or maximum from a vector, or both, or a summary of the numbers in the vector:
+
+```{r min_max_dist}
+min(dist100)
+max(dist100)
+range(dist100)
+summary(dist100)
+```
+
+Notice that there are indices even when there is only one number to show.
+
+So you can see what the smallest (or largest) distance was, but which town or city is closest to the capital? There's a trick for that too:
+
+```{r which_min}
+which.min(dist100)
+```
+
+And `which.max()` works similarly.
+
+Check if this has the same minimum distance as reported before, by completing this code:
+
+```{r report_minimum_distance_again}
+dist100[which.min(  )]
+```
+
+Is that right?
+
+## Character vectors
+
+You can also put character variables in a vector:
+
+```{r character_vector}
+ducklings <- c('Huey', 'Dewey', 'Louie')
+```
+
+Many more operations can be done on text data as well, but in this introduction, we'll only mention one more, and that is how to construct strings with `sprintf()`. This function is very useful in reading in data, generating messages for user feedback or putting labels on figures, even when working with mostly numeric data. It will be used like that in future tutorials.
+
+## Sprintf
+
+Sprintf **prints f**ormatted **s**trings. That means you can assemble a character variable, or "string"" from pre-specifed kinds of pieces. There are three kinds of pieces you will practice with here: 1) other strings, 2) integers, 3) floats.
+
+Without further arguments, `sprintf()` simply returns the string you give it:
+
+```{r sprintf}
+sprintf('This is a string...')
+```
+
+The most straightforward thing to add is another string. The places where something gets added are marked with a percentage sign, plus at least one character that indicates what kind of thing you want to insert at that point. To add a character variable or string, you need `%s` with an s for string.
+
+```{r sprintf_string}
+sprintf('Obligatory greeting: %s', my_text)
+```
+
+This can be done for multiple strings as well, that is, `sprintf()` is also vectorized:
+
+```{r sprintf_character_vector}
+sprintf('Duckling: %s',ducklings)
+```
+
+Let' ssay we want to number the ducklings as well, so we'll first need to create a vector with the numbers of the three ducklings:
+
+```{r number_duckling}
+duckling_numbers <- c(1:length(ducklings))
+```
+
+You can use that in the sprintf command as well. These numbers are floating point numbers, but you want it as an integer. You can tell sprintf to represent the numbers as integers with `%d` with a d for digit.
+
+```{r sprintf_numbered_duckling_names}
+sprintf('Duckling %d: %s',duckling_numbers,ducklings)
+```
+
+You can assign the output to a new variable, which will be a vector with three character variables. Correct and complete the following chunk of code:
+
+```{r duckling_vector}
+duckling_vector <- sprintf('Duckling %d: %s',duckling_numbers,ducklings)
+class( )
+len(duckling_vector)
+```
+
+Using these two options for sprintf you can already automatically generate most file names from a project that you would like to analyze. For example, if you number your participants and each of them does two conditions that get saved into seperate files with specified filenames, you can use %s to insert the condition names and %d for the participant numbers.
+
+In some figures you would like to show some descriptive numbers, for example the average age of your participants. Let's another bit of code already calculated that for you to be 22.8333333333... (they are all university students), but here we'll just assign it manually:
+
+```{r mean_age}
+mean_age <- 22.833333333333333333333
+```
+
+All those three's should not end up on your figure though, so you decided to limit it to two decimals. You can now use `sprintf()` with the `f%` which stand for fixed point in this case, as you can more or less fix where the decimal point ends up:
+
+```{r pretty_mean_age}
+sprintf('mean age: %.2f', mean_age)
+```
+
+# Lists
+
+Lists also store a sequence of variables, but in a list, they don't need to be of the same type, and unlike vectors, lists can store very complex variables, such as matrices or data frames (see the next tutorial).
+
+Here is a basic example of a list:
+
+```{r}
+a_list <- list(4, 'number')
+a_list
+```
+
+## List indexing
+
+Notice that the output is different: it uses double square brackets. These are also necessary when retrieving a single element from the list, instead of a list with a single element. Fix this chunk of code to show `[1] "number"` only, so the second element of the list without the `[[1]]` on the first line:
+
+```{r}
+a_list[2]
+```
+
+You see that each line on the output with actual values starts with `[1]` which suggests that we could store multiple values in every list element. And that is true!
+
+We can store the vectors of X and Y coordinates from before in one list:
+
+```{r}
+coordinates <- list(posX100, posY100)
+coordinates
+```
+
+
+## Named elements
+
+But how can we tell which are the X and which are the Y coordinates? You might argue that X coordinates always come first, but perhaps this should be represented more clearly. Luckily, in both vectors and lists, you can also name the elements.
+
+```{r}
+coordinates <- list('X'=posX100, 'Y'=posY100)
+coordinates
+```
+
+You should notice that instead of `[[1]]` and `[[2]]` we now see `$X` and `$Y`. Of course, you can still use indices to retrieve elements from the list, but now, we can also use names. To show the benefits of this, you need two chunks of code. In this first chunk you shuffle the order in which the X and Y coordinates are put in the list, to emulate a sloppy coders (aren't we all?).
+
+```{r}
+order <- sample(c(1,2),2)
+shuffled_coordinates <- list()
+shuffled_coordinates[[names(coordinates)[order[1]]]] <- coordinates[[order[1]]]
+shuffled_coordinates[[names(coordinates)[order[2]]]] <- coordinates[[order[2]]]
+names(shuffled_coordinates)
+```
+
+You can run this chunk a couple of times and notice that sometimes the order is X-Y and sometimes the order is Y-X, depending on chance.
+
+Now change this chunk of code to always return the X coordinates from the shuffled list with coordinates. You can try it a couple of times before changing the chunk: first rerun the chunk above to shuffle the data, and then rerun this chunk. You will see that it just returns the first vector in the list, with no possibility of knowing if it is correct or not.
+
+```{r}
+shuffled_coordinates[[1]]
+```
+
+So that is the advantage of naming your variables: your code will always work if you keep using names and don't rely on implicit order of variables. Of course, the problem now is to keep using the same variable names in all your data and code, but this is easier and less error-prone than having to use the same index number throughout all your data and code.

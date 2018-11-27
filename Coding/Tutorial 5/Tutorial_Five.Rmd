@@ -1,0 +1,14 @@
+---
+title: 'Tutorial Five: Flow Control'
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='', eval=FALSE)
+#setwd("~/Desktop/R tutorials/2017/Tutorial 2")
+```

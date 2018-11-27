@@ -1,0 +1,160 @@
+---
+title: 'Tutorial Three: Matrices and Data Frames'
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='', eval=FALSE)
+```
+
+In this third tutorial, you'll learn about matrices and data frames. Each of these have rows and columns, like a spreadsheet, where each cell contains some variable. They are useful to store and handle larger amounts of data. Of course, each piece of data in a matrix or data frame can still be used and changed as a kind of variable, but they can be treated as variable themselves as well. For example, you can make a list of named matrices or data frames to store the data from different groups of participants or different conditions in an experiment.
+
+## Matrices
+
+Here you will get to know matrices. They are the matrices from matrix algebra, so they are kind of rectangular tables that hold numbers (not strictly true in R). They can be created with the `matrix()` function:
+
+```{r make_matrix}
+my_matrix <- matrix(data=c(1:9),nrow=3)
+my_matrix
+```
+
+By giving it a vector of 9 numbers and specifying that there are 3 rows, the function figures out that there should also be 3 columns in order to fit all the numbers. You can see that the matrix is filled by column, that is: the first column is filled first, and then the second column, and so on. You can change all this behavior:
+
+```{r make_another_matrix}
+matrix(data=c(1:9), nrow=2, ncol=6, byrow=TRUE)
+```
+
+This code complains, but it _does_ create a matrix of the specified shape, filling in the first row first, then moving on to the second row. When it runs out of numbers it just starts over again at the beginning of the input vector. If you specify a matrix that is too small to contain all the numbers in the input, you will get the same warning, but a matrix of the specified shape is returned and the excess numbers are discarded.
+
+Try using 3 rows and 6 columns. What happened? Why is there no warning? What exactly did that warning say?
+
+## Matrix indexing
+
+We can go back to the first matrix, and use indexing to retrieve part of the content of the matrix:
+
+```{r get_number_from_matrix}
+my_matrix[3,3]
+```
+
+You can see that we now need two indices, one for the row, and one for the column. We can also retrieve an entire row at once, by not specifying the column index:
+
+```{r retrieve_second_row}
+my_matrix[2, ]
+```
+
+Change this code chunk to retrieve only the second column:
+
+```{r retrieve_second_column}
+my_matrix[,]
+```
+
+We can even get a sub-matrix from a matrix, by specifying a range of numbers for both the row and column indices:
+
+```{r}
+my_matrix[2:3, 2:3]
+```
+
+You can do simple math with matrices, just like with vectors:
+
+```{r}
+my_matrix + 2
+```
+
+Most importantly, matrices can be used to do matrix algebra, which will probably pop up in your analyses when you grow more advanced in using R, but we won't go into that here. However, understanding the row-by-column indexing will come in useful when dealing with data frames, the next topic.
+
+# Data Frames
+
+Run this chunk to see what a dara frame usually looks like:
+
+```{r show_simple_df}
+col1 <- c('[1,1]','[2,1]','[3,1]')
+col2 <- c('[1,2]','[2,2]','[3,2]')
+col3 <- c('[1,3]','[2,3]','[3,3]')
+my_df <- data.frame(col1,col2,col3,row.names=c('row1','row2','row3'),stringsAsFactors=FALSE)
+my_df
+```
+
+You see that a data frame has rows and columns, like a matrix. Like a matrix, rows and columns can have names -- although some people say that rows should not have names. Also like a matrix, you can use indices to retrieve specific values. Correct this code to get the value from the cell that is in the first row and in the first column. The value should be: `[1,1]`.
+
+```{r get_df_cell}
+my_df[row_index,column_index]
+```
+
+You can also get a whole row, or a whole column from a data frame, by only specifying thw row or column index you're interested in. Correct this code to display the third row, and the second column:
+
+```{r}
+my_df[ x ]
+my_df[ y ]
+```
+
+This chunk has two output windows, that you can select by clicking on the two rectangles at the top. By default, the last generated output will be selected. If you managed to complete the code as specified you will notice that the output is different. When you ask for a row of the data frame, you get a data frame with a single row, but there are still column names. When you ask for a column of the data frame, you get a character vector. Why is this?
+
+## Cases and variables
+
+This comes from the convention that a row represents a case, for example a participant in one of our studies, and a column represents a variable, for example their age in years at the time they participated, their sex, or the condition they were assigned to. Of course, we can also represent data collected in the experimental tasks that way, but for now, notice that age in years would be a numerical variable, while condition would be categorical and could be a character variable or an integer. That meas that if you want all variables for a specific case (a row of the data frame), you could end up with a series of different variables, and it would probably make sense to keep the variable names. On the other hand, if you'd only want one column, they're all in the same type of variable. Of course, when you ask for two columns from a data frame, that is no longer guaranteed.
+
+Let's see if you get a data frame when you index two columns. Complete this code chunk, to get the last two columns of `my_df`:
+
+```{r}
+output <- dataframe[,2:3]
+class(output)
+```
+
+So that seems to work as expected.
+
+One way to think of data frames is as a list of vectors of equal length, where each of the vectors has variables of only one kind.
+
+## Trees STRucture
+
+Now you will explore a data frame that comes with R. It is called trees, and has some data on 31 black cherry trees' height, girth and volume -- for some odd, historic reason in non-metric units, so you can safely ignore the units. Let's see what the `str()` function can do for you:
+
+```{r}
+str(trees)
+```
+
+You can see that trees is of the calss 'data.frame' and that it contains 31 observations of 3 variables. Then each of the following lines that starts with a `$` (dollar sign) describes one of those three variables: Girth, Height and Volume. Each of those are further described as `num` or numeric, and the first few values are listed.
+
+## Columns and dollars
+
+The dollar signs at the start of the lines about the variables Girth, Height and Volume are there on purpose. You can type the name of a data frame, followed by dollar sign, followed by the column name (no spaces) to access the column.
+
+Change the folowing chunk of code so that R shows the height of all trees:
+
+```{r}
+trees$Girth
+```
+
+We can also use the column name in square brackets for indexing, while leaving the row indices unspecified:
+
+```{r}
+trees[,'Girth']
+```
+
+While you can use the row names in indexing similarly, you can't use the earlier dollar notation for rows, only columns. Since columns are supposed to have one variable, and each row has a case or observation, you can use column names in formula's to express relationships between variables.
+
+For example, for pine trees you might suspect that the height of the tree depends on age. Let's plot that first:
+
+```{r}
+plot(trees$Height,trees$Volume)
+```
+
+But you could have done that with simple indexing as well (`plot(trees[,2], trees[,3])`). So here's an example that only works only for column names: what if the height of the trees depends on both age and Seed? You can create a simple linear model for that with the `lm()` function (don't worry about the details of that for now):
+
+```{r}
+lm(Volume ~ Girth + Height, data=trees)
+```
+
+You get a linear model that predicts the volume of a black cherry tree as: `(Girth * 4.7082) + (Height * 0.3393) - 57.9877`. Whether or not this model makes sense is another matter, but the point is that you have to put the variables that matter to you in separate columns. Well, it _can_ be done the other way around -- I tried -- but it takes way more effort. So let's just make data frames work for you.
+
+## head(trees)
+
+## as.matrix
+
+## Factors
+
+Loblolly?

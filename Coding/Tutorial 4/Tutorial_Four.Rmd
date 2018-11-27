@@ -1,0 +1,13 @@
+---
+title: 'Tutorial Four: Reading & Writing Files'
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='', eval=FALSE)
+```
