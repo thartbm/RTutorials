@@ -109,7 +109,7 @@ So that seems to work as expected.
 
 One way to think of data frames is as a list of vectors of equal length, where each of the vectors has variables of only one kind.
 
-## Trees STRucture
+## Looking at data frames
 
 Now you will explore a data frame that comes with R. It is called trees, and has some data on 31 black cherry trees' height, girth and volume -- for some odd, historic reason in non-metric units, so you can safely ignore the units. Let's see what the `str()` function can do for you:
 
@@ -117,7 +117,23 @@ Now you will explore a data frame that comes with R. It is called trees, and has
 str(trees)
 ```
 
-You can see that trees is of the calss 'data.frame' and that it contains 31 observations of 3 variables. Then each of the following lines that starts with a `$` (dollar sign) describes one of those three variables: Girth, Height and Volume. Each of those are further described as `num` or numeric, and the first few values are listed.
+You can see that `trees` is of the class 'data.frame' and that it contains 31 observations of 3 variables. Then each of the following lines that starts with a `$` (dollar sign) describes one of those three variables: Girth, Height and Volume. Each of those are further described as `num` or numeric, and the first few values are listed.
+
+The function `str()` is supposed to show you the _structure_ of a variable, and it can be used on other variables than data frames.
+
+If you just want to see the first few rows in a data frame, you can use the function `head()`:
+
+```{r}
+head(trees)
+```
+
+This will also give you some idea of what is in a data frame. In order to look at the whole data frame, you can use `View()`. In R Studio, this will open a tab in the source code pane, and in a simple R shell this will open a new window to show you the data frame.
+
+```{r}
+View(trees)
+```
+
+Before starting to work with data, you should always look at it.
 
 ## Columns and dollars
 
@@ -151,10 +167,53 @@ lm(Volume ~ Girth + Height, data=trees)
 
 You get a linear model that predicts the volume of a black cherry tree as: `(Girth * 4.7082) + (Height * 0.3393) - 57.9877`. Whether or not this model makes sense is another matter, but the point is that you have to put the variables that matter to you in separate columns. Well, it _can_ be done the other way around -- I tried -- but it takes way more effort. So let's just make data frames work for you.
 
-## head(trees)
-
-## as.matrix
-
 ## Factors
 
-Loblolly?
+In the trees data frame, each column had a numeric variable. However, in experimental design, you will usually use conditions. These can be represented as categorical variables that are used to group variables in other columns. Such variables are called factors in R. We'll briefly look at them and may return to them later. To do this we will use the `sleep` data frame. Of course, you will first look at the structure of the data frame:
+
+```{r}
+str(sleep)
+```
+
+This looks somewhat similar to the trees data frame. Now there are 20 observations in 3 variables. There are two factors: group and ID. Group is a bit misleading, as it actually indicates the kind of sleeping pill taken, where ID indicates the participant. Each participant took both drugs, so there are not two separate groups of participants. The column extra indicates the number of extra hours of sleep the participant got through using the drug.
+
+We'll have a look at the first few rows:
+
+```{r}
+head(sleep)
+```
+
+Below the column names, you can see the kind of variables: `extra` is a double, a kind of numeric variable type, and `group` and `ID` are factors.
+
+And we'll look at the whole data frame:
+
+```{r}
+View(sleep)
+```
+
+You can see that each of the ten IDs appears once in each "group".
+
+The datasets that come with R also have a help page (this is not case for your own datasets, unless you wrote one). In order to understand the data, we should also read the help page:
+
+```{r}
+help("sleep")
+```
+
+You can see that similar information is provided in the help page, so this verifies that you can learn a lot about a dataset by looking at it with the three tools you've learned. At the bottom of the help page you can also see some R code that supposedly shows you the data and some interesting bits of information about it. You can copy-paste that code into the Console to see what happens.
+
+The use of factors will become more interesting when you actually do some statistics, but you should use variables like them to organize data as well. For example, you can take the same measures after training with aligned feedback or after training with rotated feedback.
+
+You could represent a series of reaches with aligned or rotated feedback in a data frame with the following columns:
+
+- aligned or rotated feedback
+- trial number
+- target angle
+- time after trial onset
+- hand X position
+- hand Y position
+- cursor X position
+- cursor Y position
+
+And we actually do something very close to this - as you will see in the next tutorial.
+
+While the first three variables or columns would represent ways to group the data, or independent variables of a sort as the experiment determines them, for each separate trial, the last five columns describe a reach trajectory through time that we can process.
