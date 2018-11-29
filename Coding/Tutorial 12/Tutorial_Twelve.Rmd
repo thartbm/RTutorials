@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Eight: Scripts'
+title: 'Tutorial Twelve: rticles'
 output:
   html_notebook: default
   html_document:
@@ -11,4 +11,3 @@ output:
 library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
-

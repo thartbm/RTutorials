@@ -14,3 +14,9 @@ opts_chunk$set(comment='', eval=FALSE)
 
 In the last tutorial you saw how data can be represented in data frames. But of course you don't want to keep using example data frames that come with R. You want to use your own data. So here you will learn how to load data from existing files and how to store data frames in new files. There are several useful formats, but here the focus is on CSV files. CSV stands for 'comma separated values', as this is the way data is stored in those files. The advantage of using CSV files is that they are relatively easy to create but can also be used with office software like Excel or SPSS, and by most scripting or programming languages, like R or Python. That said, most principles of reading and writing files hold for other file types as well and R comes with the capability, or can be extended, to handle many different file types.
 
+tageo dataset on Canadian cities? (data from 2000)
+
+or the file that can be downloaded from here:
+
+https://www.maxmind.com/en/free-world-cities-database
+
