@@ -1,5 +1,5 @@
 ---
-title: "Tutorial Zero"
+title: "Tutorial Zero: R and R Studio"
 output:
   html_notebook: default
   pdf_document: default

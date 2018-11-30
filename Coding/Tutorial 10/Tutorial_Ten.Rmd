@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Ten: GitHub'
+title: 'Tutorial Ten: GitHub and the Open Science Framework'
 output:
   html_notebook: default
   html_document:
@@ -10,4 +10,28 @@ output:
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
+
+
+# GitHub
+
+First make a GitHub project, then an R Studio project.
+
+
+
+In order to directly contribute to someone else's GitHub project, you need to first fork their project. Then also declare the "upstream" repo somewhere, in your local git version of the project. 
+
+How to push merge requests to someone else's GitHub project.
+
+
+
+# Open Science Framework
+
+The Open Science Framework (OSF) plays a role that GitHub can not.
+
+You can register projects. Registered projects can't be altered anymore. This guarantees to your readers that you didn't tamper with data files or code after publication.
+
+You can also get a DOI for your data and code so that you can always show that you did something first.
+
+Pick the Canadian file server.

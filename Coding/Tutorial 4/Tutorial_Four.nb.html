@@ -179,12 +179,309 @@ $(document).ready(function () {
 <!-- rnb-text-end -->
 <!-- rnb-text-begin -->
 <p>In the last tutorial you saw how data can be represented in data frames. But of course you don’t want to keep using example data frames that come with R. You want to use your own data. So here you will learn how to load data from existing files and how to store data frames in new files. There are several useful formats, but here the focus is on CSV files. CSV stands for ‘comma separated values’, as this is the way data is stored in those files. The advantage of using CSV files is that they are relatively easy to create but can also be used with office software like Excel or SPSS, and by most scripting or programming languages, like R or Python. That said, most principles of reading and writing files hold for other file types as well and R comes with the capability, or can be extended, to handle many different file types.</p>
-<p>tageo dataset on Canadian cities? (data from 2000)</p>
-<p>or the file that can be downloaded from here:</p>
-<p><a href="https://www.maxmind.com/en/free-world-cities-database" class="uri">https://www.maxmind.com/en/free-world-cities-database</a></p>
+<p>Along the way, you will learn a little more about how to manipulate data frames.</p>
+<p>With this tutorial you should have downloaded a file (“cities_canada.csv”) that you can use to practice. It is open data from tageo.com on the largest 300 cities and towns in Canada. The data is from the year 2000, so it is a bit dated.</p>
+<p>You can open this file outside of R, for example with a text editor or a spreadsheet program. Using a word processor is not advisable. You should try this right now to see why CSV files are so useful: you can open them with many different programs on almost any computer, and you can even read them yourself.</p>
+<div id="reading-a-csv-file" class="section level2">
+<h2>Reading a CSV file</h2>
+<p>Let’s read the file’s content into R:</p>
 <!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2l0aWVzIDwtIHJlYWQuY3N2KCdjaXRpZXNfY2FuYWRhLmNzdicsIHN0cmluZ3NBc0ZhY3RvcnM9RilcbmBgYCJ9 -->
+<pre class="r"><code>cities &lt;- read.csv('cities_canada.csv', stringsAsFactors=F)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>You have used the function <code>read.csv()</code> to read in the csv file. You have to provide it the filename, and in this case there is one column with string variables, the names of the cities, but you don’t want that to be a “factor”.</p>
+<p>Since the variable <code>cities</code> got the output of the <code>read.csv()</code> function, it should now be a data frame and you can use <code>str()</code> and others to have a look at it. Complete the following chunk to examine the structure of the data frame <code>cities</code>:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3RyKClcbmBgYCJ9 -->
+<pre class="r"><code>str()</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>You’ll see that there are 300 observations (rows) and 5 variables (columns). The first is rank, which puts the cities in the order of size: largest first.</p>
+<p>However, you don’t want the rank column, as it is practically given by the population column. You’d rather have the cities sorted by name as well. After making these changes to the data frame, you will store the data frame in a new file.</p>
+<p>First you decide to remove the Rank column. You can use the <code>subset()</code> function for that, whith the <code>select</code> argument to indicate which columns you want. By prepending that with a minus symbol, those columns are not kept, but removed instead.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlfY2l0aWVzIDwtIHN1YnNldChjaXRpZXMsIHNlbGVjdD0tYyhSYW5rKSlcbmBgYCJ9 -->
+<pre class="r"><code>my_cities &lt;- subset(cities, select=-c(Rank))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Let’s see if that worked as expected, fix the chunk below. You won’t get an error message, but it is still incorrect!</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc3RyKGNpdGllcylcbmBgYCJ9 -->
+<pre class="r"><code>str(cities)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiJ2RhdGEuZnJhbWUnOlx0MzAwIG9icy4gb2YgIDUgdmFyaWFibGVzOlxuICQgUmFuayAgICAgIDogaW50ICAxIDIgMyA0IDUgNiA3IDggOSAxMCAuLi5cbiAkIENpdHkgICAgICA6IGNociAgXCJUb3JvbnRvXCIgXCJNb250cmVhbFwiIFwiVmFuY291dmVyXCIgXCJDYWxnYXJ5XCIgLi4uXG4gJCBQb3B1bGF0aW9uOiBpbnQgIDQ1NTE4MDAgMzI1NjMwMCAxODM2NTAwIDkzODMwMCA4NjMwMDAgODEyNDAwIDY0NTEwMCA2NDMyMDAgNjM3OTAwIDQwMzgwMCAuLi5cbiAkIExhdGl0dWRlICA6IG51bSAgNDMuNiA0NS41IDQ5LjMgNTEgNDUuNCAuLi5cbiAkIExvbmdpdHVkZSA6IG51bSAgLTc5LjQgLTczLjYgLTEyMy4xIC0xMTQuMSAtNzUuNyAuLi5cbiJ9 -->
+<pre><code>'data.frame':   300 obs. of  5 variables:
+ $ Rank      : int  1 2 3 4 5 6 7 8 9 10 ...
+ $ City      : chr  &quot;Toronto&quot; &quot;Montreal&quot; &quot;Vancouver&quot; &quot;Calgary&quot; ...
+ $ Population: int  4551800 3256300 1836500 938300 863000 812400 645100 643200 637900 403800 ...
+ $ Latitude  : num  43.6 45.5 49.3 51 45.4 ...
+ $ Longitude : num  -79.4 -73.6 -123.1 -114.1 -75.7 ...</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Now that that’s done, you want to sort the data frame alphabetically. That means you want to use all rows, in the order given by the column City. You can use the <code>order()</code> function to get a list of indices that would sort the list provided as input to the function. Make sure this chunk only uses the City column:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYWxwaGFiZXRpY2FsX2NpdGllcyA8LSBvcmRlcihteV9jaXRpZXMkQ2l0eSlcbmFscGhhYmV0aWNhbF9jaXRpZXNcbmBgYCJ9 -->
+<pre class="r"><code>alphabetical_cities &lt;- order(my_cities$City)
+alphabetical_cities</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICBbMV0gIDIxIDIyNSAgOTUgMTU4IDE4MyAgODQgMTk5IDE2NSAxNzYgMTgxIDE5NyAyNTIgMjQyIDE3NyAyNDEgIDIwIDExOSAxNjkgMjAwIDI0NCAgNDUgIDU4XG4gWzIzXSAxMDAgMjg3ICA3MiAyMjIgMTE2ICA4NSAgMzIgMjMzICA5MCAyODQgMTUzIDEwMiAyMDYgICA0ICA3NyAxNTYgMTMwIDE2NiAyNTUgMTk0IDIxMiAgOTNcbiBbNDVdICA2MCAgNTYgMTQxIDIzNiAgMjggIDUxIDI3NSAyNTQgMTE3IDE0NCAxMjUgMTIxIDEwOSAgNTMgIDc1IDE2NyAxMTIgMjU2IDIxNiAxNzIgMTQ3IDIyOFxuIFs2N10gMjgzIDI2NSAgNDcgMjU5IDI5NiAgOTYgMjg2ICAgNiAxMjMgMjMyIDE1NCAyMTUgMjQzIDE4OCAyODUgMTIwIDI3NyAxMjYgMjE4IDEyMiAgNTAgMjk5XG4gWzg5XSAyMDcgIDE3ICA3NCAgNjIgMjYwIDEwNiAyMzAgIDQ5IDE1NSAgNjEgMjkzIDE1OSAyODkgIDI2IDE3MSAgMTUgICA3IDI1MCAyNzAgMTQ5IDE1NyAxOTJcblsxMTFdIDE5MSAyMzEgMTYyIDI0NyAyODggIDY5ICA0MSAgMzYgMjAzICAyNCAxNTEgMTUwIDI2NyAyNjEgIDI3IDI1MyAyMTcgIDEwIDE3OCAxODYgMTg1IDE4N1xuWzEzM10gMjIzIDI0NiAxODAgMjI5ICA4MyAxMjkgMTc0ICA0MCAxMTUgMjc0IDI1NyAgOTcgIDExIDI5MSAxMDggMjk3IDE2MSAgNDYgMjQ4ICA3OSAgOTIgIDMzXG5bMTU1XSAyNzggMjc5IDE5MyAgIDIgIDc4IDI3MiAyMjcgIDM1ICA4NiAyMjQgMTkwIDEwNyAyNDUgMTg0IDExNCAgNTIgIDg3IDE0NSAyNTggIDgyICA4MSAyMDRcblsxNzddICAxNiAgIDUgIDk0IDE3OSAxMDQgMjY5IDEyNyAgNjcgMjY4IDE2OCAgMzcgMjQ5IDI2NCAyMzkgMTQyIDEwMyAxMzEgMjkyIDI5MCAyNTEgMTYwIDIzNVxuWzE5OV0gMTQ4ICA3MCAgNDQgMTM0ICAgOCAxMzkgIDM4ICAxOSAyMjAgMjQwICA2NSAxMzIgMjAyIDIwOCAyNzEgIDg5ICAxMiAyOTQgMjk4IDE3MyAyMTEgMjIxXG5bMjIxXSAxMDEgIDU1ICAzOSAgNDggIDMxICAyNSAyNjMgIDY0ICA2MyAxODIgIDM0ICAxOCAgNDIgMjgyIDE4OSAgOTEgIDU0ICAyMiAxMzggMjM0IDMwMCAxNzVcblsyNDNdIDI4MSAgNjYgMTE4IDE1MiAxOTggMjY2IDIxMCAgODAgMjE0IDE0MyAyNzYgIDI5IDI3MyAxMzcgMjYyIDEzNiAgNzMgMTI4IDIwNSAyMjYgMTEzIDI4MFxuWzI2NV0gIDk4IDE0NiAgMzAgMTM1ICA3NiAgIDEgMTk1ICAyMyAxMDUgMjA5ICA4OCAxMTEgICAzIDI5NSAgNTcgIDEzICA2OCAxNzAgIDk5IDIzOCAxNjQgMjAxXG5bMjg3XSAxOTYgMTYzIDIxMyAxMTAgIDQzIDE0MCAgMTQgMjE5ICAgOSAgNTkgIDcxIDIzNyAxMjQgMTMzXG4ifQ== -->
+<pre><code>  [1]  21 225  95 158 183  84 199 165 176 181 197 252 242 177 241  20 119 169 200 244  45  58
+ [23] 100 287  72 222 116  85  32 233  90 284 153 102 206   4  77 156 130 166 255 194 212  93
+ [45]  60  56 141 236  28  51 275 254 117 144 125 121 109  53  75 167 112 256 216 172 147 228
+ [67] 283 265  47 259 296  96 286   6 123 232 154 215 243 188 285 120 277 126 218 122  50 299
+ [89] 207  17  74  62 260 106 230  49 155  61 293 159 289  26 171  15   7 250 270 149 157 192
+[111] 191 231 162 247 288  69  41  36 203  24 151 150 267 261  27 253 217  10 178 186 185 187
+[133] 223 246 180 229  83 129 174  40 115 274 257  97  11 291 108 297 161  46 248  79  92  33
+[155] 278 279 193   2  78 272 227  35  86 224 190 107 245 184 114  52  87 145 258  82  81 204
+[177]  16   5  94 179 104 269 127  67 268 168  37 249 264 239 142 103 131 292 290 251 160 235
+[199] 148  70  44 134   8 139  38  19 220 240  65 132 202 208 271  89  12 294 298 173 211 221
+[221] 101  55  39  48  31  25 263  64  63 182  34  18  42 282 189  91  54  22 138 234 300 175
+[243] 281  66 118 152 198 266 210  80 214 143 276  29 273 137 262 136  73 128 205 226 113 280
+[265]  98 146  30 135  76   1 195  23 105 209  88 111   3 295  57  13  68 170  99 238 164 201
+[287] 196 163 213 110  43 140  14 219   9  59  71 237 124 133</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>What does this mean? The first city after alphabetical sorting had index 21 in the original list. Toronto was originally on spot 1, but will now end up on spot 270.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlfY2l0aWVzIDwtIG15X2NpdGllc1thbHBoYWJldGljYWxfY2l0aWVzLF1cbnN0cihteV9jaXRpZXMpXG5gYGAifQ== -->
+<pre class="r"><code>my_cities &lt;- my_cities[alphabetical_cities,]
+str(my_cities)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiJ2RhdGEuZnJhbWUnOlx0MzAwIG9icy4gb2YgIDQgdmFyaWFibGVzOlxuICQgQ2l0eSAgICAgIDogY2hyICBcIkFiYm90c2ZvcmRcIiBcIkFjdG9uXCIgXCJBaXJkcmllXCIgXCJBbGRlcmdyb3ZlXCIgLi4uXG4gJCBQb3B1bGF0aW9uOiBpbnQgIDEzOTkwMCA4MTAwIDIyNTAwIDEyMDAwIDEwMTAwIDI5MTAwIDk0MDAgMTEzMDAgMTA0MDAgMTAxMDAgLi4uXG4gJCBMYXRpdHVkZSAgOiBudW0gIDQ5LjEgNDMuNiA1MS4zIDQ5LjEgNDQuMSAuLi5cbiAkIExvbmdpdHVkZSA6IG51bSAgLTEyMi4zIC04MCAtMTE0IC0xMjIuNSAtNzkuOSAuLi5cbiJ9 -->
+<pre><code>'data.frame':   300 obs. of  4 variables:
+ $ City      : chr  &quot;Abbotsford&quot; &quot;Acton&quot; &quot;Airdrie&quot; &quot;Aldergrove&quot; ...
+ $ Population: int  139900 8100 22500 12000 10100 29100 9400 11300 10400 10100 ...
+ $ Latitude  : num  49.1 43.6 51.3 49.1 44.1 ...
+ $ Longitude : num  -122.3 -80 -114 -122.5 -79.9 ...</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Let’s check if the whole data frame was sorted by looking at Abbotsford in the original and in the new data frame. It should have the same population, latitude and longitude:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2l0aWVzW3doaWNoKGNpdGllcyRDaXR5ID09ICdBYmJvdHNmb3JkJyksXVxuYGBgIn0= -->
+<pre class="r"><code>cities[which(cities$City == 'Abbotsford'),]</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibmNvbCI6NSwibnJvdyI6MX0sInJkZiI6Ikg0c0lBQUFBQUFBQUExMVFTMDdETUJDZE9Ba2trYWdxQVJkZzMwaUEySU5nMFVVWHFLdXVrSnpFaGFpSkhUa09QN0huQU55RE0zQVZMbElZcDNia0pwTGo5OFl6ODJiZThtNTFrYXdTQUNEZ0J3RVFIMkZBOE9kQkFMRytYd0g4WXdRaG5xUCtBZUFVejlSSlNtNnlUS2gyTFdReFpKR3pEN3duR2wvUFA3OVAzbi9ubHY4OGZGM3FieVFWY2xxejFyUU9UVEJZVXI2eCtMWlViMWJ5WGpSZFJWVXB1SWxFQzJTcUs1amg4VUx3eDExZ1h5ZVc0aVcxV3M1Sys4UGtGVzNiOFo0RlZUUmRTNnhGdGgyVkhJcEdqNE5GUkJzV2pZcGh4RDJwT3hwNUdHRTNjZHB4UFcweHk1ODZ2cG1kWHptNW5yT0NpOFBkYk9UUDlJcnNqTG1vYThhVm9RY01MZUxXc1pCSkthUTFtejNUeWo1VU5HT1dUTkMrM3IyMGtlWFFLY0ZvbXlxaGhxSWtGNVdOOUdiQjloOEFvNjFTYndJQUFBPT0ifQ== -->
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["Rank"],"name":[1],"type":["int"],"align":["right"]},{"label":["City"],"name":[2],"type":["chr"],"align":["left"]},{"label":["Population"],"name":[3],"type":["int"],"align":["right"]},{"label":["Latitude"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Longitude"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"21","2":"Abbotsford","3":"139900","4":"49.06","5":"-122.3","_rn_":"21"}],"options":{"columns":{"min":{},"max":[10],"total":[5]},"rows":{"min":[10],"max":[10],"total":[1]},"pages":{}}}
+  </script>
+</div>
+<!-- rnb-frame-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>And in the new data frame (complete this chunk):</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlfY2l0aWVzW3doaWNoKGNpdGllcyRDaXR5ID09ICdBYmJvdHNmb3JkJyksXVxuYGBgIn0= -->
+<pre class="r"><code>my_cities[which(cities$City == 'Abbotsford'),]</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibmNvbCI6NCwibnJvdyI6MX0sInJkZiI6Ikg0c0lBQUFBQUFBQUExMVF1MDdFTUJEY0pENUlJbkU2Q2RGUzB5UVNOTFFJRU5VVlBKb1VOQ1l4RU9IWWtlTWM4QUhVL0E0bDRuZG9FUTNTd1Rwbm40SUwyenV6M3ZGNExrK0xnN1JJQVNDRWlCQUlJeXhKaUZzQUJCSnpQZ0ZFMjRiRk5SczEwbVBHT1Z2VXVDSGFHanJ3ODRYbjFOUkhaenNmcjlkNzN3Ni9YeFVYbnkrN2I1NzhSTkNHZFZhYVdKS2MxUHJaUFhNdTI1NVRYVXRobVhpT1NQY1ZzemlaUzNHM0l2NXJKMG8rNWs3ZkdvVE1OMUJ5Mm5YKzN5cXFhWDZyY0JiUjBodlpsSzJ4ZzBPaENTYjJoc0hEZ1RLSzlubnc2dkhGV1MrTTJ5b3I3M3Z4a08wZmp1NEdveStNYTdMeUZ2NWFyZGg1TEdYVE1LRXQzR0FZa1hDSlRaaFNVcm13MllKeTErRDBoamt3eGZpRzlQSlcxV3VsRk5rdTExS3ZoOUpTY3NjTVljSHlELzlhc2k1WEFnQUEifQ== -->
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["City"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Population"],"name":[2],"type":["int"],"align":["right"]},{"label":["Latitude"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Longitude"],"name":[4],"type":["dbl"],"align":["right"]}],"data":[{"1":"Belleville","2":"64500","3":"44.17","4":"-77.38","_rn_":"45"}],"options":{"columns":{"min":{},"max":[10],"total":[4]},"rows":{"min":[10],"max":[10],"total":[1]},"pages":{}}}
+  </script>
+</div>
+<!-- rnb-frame-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+</div>
+<div id="write-cvs-files" class="section level2">
+<h2>Write CVS files</h2>
+<p>You are happy with this new data frame, so we should store it. For this, you can use the function <code>write.csv()</code>. Let’s look up the help for this function:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaGVscCh3cml0ZS5jc3YpXG5gYGAifQ== -->
+<pre class="r"><code>help(write.csv)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>So the first argument is the data frame <code>my_cities</code> and then you need to specify a file name. It rarely makes sense to use quotation marks for text data or to store row names, so it <em>does</em> make sense to learn how to not store those:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxud3JpdGUuY3N2KG15X2NpdGllcywgZmlsZT0nbXlfY2l0aWVzLmNzdicsIHF1b3RlPUZBTFNFLCByb3cubmFtZXM9RkFMU0UpXG5gYGAifQ== -->
+<pre class="r"><code>write.csv(my_cities, file='my_cities.csv', quote=FALSE, row.names=FALSE)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>If you check the <strong>Environment</strong> tab, you will see there is a data frame called <code>my_cities</code> with 300 observations of 4 variables. You will now remove that data frame from memory and then load it from the file.</p>
+<p>You can remove objects from memory by using the <code>rm()</code> function. Fix the code chunk below to remove <code>my_cities</code>:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucm0oY2l0aWVzKVxuYGBgIn0= -->
+<pre class="r"><code>rm(cities)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoib2JqZWN0ICdjaXRpZXMnIG5vdCBmb3VuZFxuIn0= -->
+<pre><code>object 'cities' not found</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>You can also use <code>rm()</code> to remove almost everything from memory. Check the help file for <code>rm()</code> to see how.</p>
+<p>Now you can load the contents of <code>my_cities.csv</code> again:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubXlfY2l0aWVzIDwtIHJlYWQuY3N2KCdteV9jaXRpZXMuY3N2JylcbmhlYWQobXlfY2l0aWVzKVxuYGBgIn0= -->
+<pre class="r"><code>my_cities &lt;- read.csv('my_cities.csv')
+head(my_cities)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibmNvbCI6NCwibnJvdyI6Nn0sInJkZiI6Ikg0c0lBQUFBQUFBQUEyVll5MjRrU1JYTmR0dXVoMTA5cmVtZUdWYVFZdE1ic2lWQUxFZHF2OTI0M1BhNGpEMGpvWkdpTXFNcW95c3lvaHdaNGVwQ0xHQ0IrQUIrQUFuRUNyRm02VTlneHhZa1Z2QUI3QVpPWkZVODBsTUxPKytKMTQwYjkzRWlyZzYvL0ZIL3kzNlNKQnZKMDgzTlpPTXBQamMzOE9kSnNwbjA3UDhQU2ZMMGhVWHhmNEQvMjAyakhRQmdoU2RiSzd3MWNKdlRlOHByZkQwSCtJTTEydDhiajZXdUoxSVZhMlJyTDlkU3JJWE9IbE9GWXRUMzVnVlZVeVh2SGRMZDQ1elZZY0RtSHErSUgxeVZWTlY2TGU2c3hiRlJVOSs3a3ZYNmUzZFBURTJkamFFSkZYNTJKZWFLU2VYbGVreXhtaHV6dmJma0ZYV3RPL3VFMFN5WEZTWEdiV2FmaU1uRTlkNG5LdXlsdTA5MGFTTDE5c2t5VlhKTWxYYlQ5L2NwcWVwN3hua1loTGtyS1hUb2djYTRSd2VJcEl6N05TVVAxdW52U3lHV2NmZFA5dVdpSXFLQk1rRVhPYW0xYjl6WlZ5U25ZOFdLYVZCQWtTSTZyUTVrVWZnRmVsYlVVVHVtc0tNWFJIc3o5ZmVWekdmdFhTa3BaNXdKcjdTVmd4Vk1QbU5pV3BMS3JYSkFPTVdpeko4MGdDbFJ5N1g0N0lCVTh6RXNreXAySDQ3SG9aRjdBVkt5cGtFVWxWUTBMS1BHVWxDaXdyeUtVd3hQNXh5R0NkMnN6YWErMi9NREtyUWlQSlV6SXNpVXVOVUdCeVhHUzYweHhTS29VTUlQL05aZXJNV3NrR2JLTVhIb3VYTlFzakZRVWtublhpOEI1ZEpvVnJIc3ZSUjNobEd2ZlI5dGlJMEZ5V2ZPekFlUzhJTHdvTGdrR3VQbHpPc2lzWUNQRHZUUFM1eW5kNGNEaVFuRmRDRmw0UldRSXFkenpXQ1RNZnkzaGpLbEM2Z0RxUVJWNlZpRkZib1dXeERPZ3dwR2FTcklNcXl4SUtMbDg3MEQ2QkJQTWpoUXkxckR2bU5LY3JkYTU1Q1llZWxkYVBlUUxHb29sU3RLL2ZZT0pSK0gyT3dkSWhoSUxvWHpvbWVIaWl6dDZkNURRZW8wNmg4cWc4UUJ4SjN2d0NJSXdpTFdjdnRRTFVQaTZCM0NaMU5PWnFIWmlKeEV6VUswSXVDb3NGRWRBaFd5RVVXVTJMYU9pdG9MTzBjNENLbGJDeHp4aWluaWU5YzEvZUQyZlZScmV1OFg3eHdUSllMSGJSOGpveG9YYkwxam5IQTY0U0dpajZYU0tRMTVhN2NCSmppVG5McFJIelZZVFpqUTZYdFplaldQRlVXK1psRkM3NTBnSklTOE0xNXZBSVUzYmZjRUhpbkNHZlZQcUZUVE9GNjZEY0w4b1hWTzJCaUc4ZnFmMk1pMHZ1ajd5MGFGMHE5bnZjbTE3bHFwU0hNYnNFNmpadzFHMDdraUxHeDdaOVZ6QXRkd2E3MklvR3pCY0Z5K1VOamU5MVRFK1gzN3hGQStkMnIwVHdtRGo2RVdPVlU2cDRTekNYR0gxajBsRll0VDFTbk1GcExacDZka1BsK3VQVFdiU2lTeGFOTzlVMktRY0prdmsxaHVNYU4xdEZ6L2xFM0xWbjdjUG1XeEI1NGFvZHR4K0ZaTVVUK2xEOTd1V3lGWVBmRzFwdlAyam5ERDNJYTdQNVdjVVdRN0o1K1Jpa3M1OThYekRLNmczVG51bkpHNXFXZWtSb0p4ODUyaGxDMzhTVytmVVNHOWgvY2c2Wlo2WjZ4QzhZd0M5NHdoNUZUQlJOQUFrMGN4OWJHVHN5blNoSWp5MnVDTXFSbTNweHVGR0ZiUWVVbUZ0MWdIQUt1STIvQmdTTWFvamxLbE9kUCtXSWZJVWNZYndZb1Nlcm9waDZSWTFoWHpTYk03SklnajVaM1J5dHFFY01FQW5MbU9LTkVRSEFIYmlETEZrQlltZDJZZDBqck5wVVpJZlFnamROa3E2cDJoZGQ0UU1rUExxQmJVYzRnaHZJVDdrQmx5dVN5d1pCMUsrdlpRUmlSZ1p5Z05xMXVzWk91Y1RLVTcxLzQ1Z2Y2dDVIa09SL0RIdEh0T0M1YmoyTkxTMjdaelRzR2RkQkJaWVkvSGoyK0Z5am1LVXBSeUlHcVVSODc4L0JiZ3hFQUxGWGVxeUZSNEkxaEFVY0pEQnh0ajc4bkNyeGt6eFQ0azFrcnBuWGR3YjFaSk54NmlMYmF6cUgyT1BYc1R2QU01RGlaOFJ4ZXByZjlUdVlnaHBPMkl2ZzRzMUZDcmlIRTlmNGRjWENJWmFKQ1NDTzg1M0xPa0ZaRExCYkpqcUE0WE02a0QrZHE4NElYNzNybEF2cHUyMmVhRnNpVERCV1gzUXNsS3d2WnVVeGQxU1JZK2dDKzBEbEwvWWtHRkpReitGTGN1NFJlZTlVR1l0ZkxQRGhDMWJJM29YdElLekNCRTZDVzFSbzVpNFJKMHVneTk3ZnBlZzEzSUZBeFBnVlI1MG5MSmFWMnoxc0xibDFLQXl2azFwTXJOUEdTVmp3Rm9NcVZJRlk5cXhxNXRTUWxJaHhMTytUNjFXRWI0QktVeEd5TXFXa21zR1pFaGErbmdtdjFtbGlKSy9pdUU4cW1uTzcwR0tlV2N0cnJNRVRUTE1QWGlNU1VlWE1KcFVTNGJGZlVqY05xVTNrZWdNdlBRYy9zTFE4ZlVwWm9PcEZyNHJORzlva1ZhMEpBanJtaGN0cStvZ0FtY2MvZXZtc3VoRGtmWnZVTHNvQ0E0dTMxMHhlNHR1ODBLazNGcDVyNmJ2VEhkazdBcTdoWlJabmhwNVdXS3FZUUdQWUdKaktmN2d5dHBsaUt6UlVVVVRySHZqQm9XazFzV2ppM1RPc00xQTl6ZXRYL1d0Tk1NbUM2aERUcFk1dWJjOWhQWExNUzNHejk3M0locmhGM0NuZEM2dVNMQmhaNDFXRGFoSEJuUlo1dkJDbDJka0NkaEs3QmNFdVJPNk5iYVVQYWVFcEhWUm1XV0MyRTJhbHFyb2gyaDY3MW45SmpLN1Fia2xjOEhLd3pxTHR0YlNIVXBLMUlIQlRnWlcwL0Vuck1WWTVrd3lvdXdHSWVWVXFJOEpSMkJvZnFrMGhzUjhBSXRROWtlRWNQWGRKT21zYlU2STJvM3A0UElaeWprZmlMY1ZETFFMcDlqUnNoT1RMQndSUU9DakdEdkdqNzRSNnpLWlRBTUI2K0xTVUYzWktzM2VKRzNnSlhyRmxIY0drVVRRbEErU0haSGMyVnNyTVZQR3FNN2c1SmVsMTV0VFprWWg2dk9Mb0E1ZUVnck9ZNlE5SlpwNDFCaG5DTHhYYnpmQUdWOHcxMGhTdnFhTU5Jb0x4U25FZXZmR1praXBvNGpYSC9BdEVLVXJaR2FGY0ZzUm9jMFBCZ3QyQVJCWlVCcy9OdkY5bWhaQ00vV2RsZFNXa1VCc1ROYWN0eGJZbk52WFZ0WGNucGR3NnZDUmJ4elhZSzFlNzk3QnJIWmZtdk83alY4Y3g1VjJ1dlMyQXRJVkJqNzE4eVc0cWpRZHE1WlpSbVBGMUV6aEs5eVc5ZkkrdHl2cWlTckVXVk50cXBERjZOYy8rN1BQclRmVkc0SXo0cFg0Zkp3MDhSSVNvbS9QUFJ1Y04yU0ppb0JOeFNjdFZXbGJsQmwvTGE2TjdZTUtoOUVBeWUzbk9ZV0M5a1huckRUWFVEQzZKWkRBcXVSN2xyWDdmNHRhaW15ODhLN1crZTJ1YzU0Qlc1TFpwOUYvSVVGTXRpelVYbVpJYytieVNUV3BHOWJhVzRmQTFwSUtWWGQ3cFBheHlPM3FkdUdmRlIxN0NHZDI5Wk56SXF6b0VZWG9tQnpHdllMMHArT29RN2hucXBaRERxR2g1T3ZrSnVpbDQyZHIxQkk1V0ltMk1TditwVlVNK3Z3N1VmUHJSd2NidjNtR1Y1Q0o4U2VCYjYrc1p1d1NMTHgvVjhteWZmK21DUzMvMHFTMS85SWtsYzZTZTcrYkIzS3RyODUvZTFmWHY3aW42ZHZqdjcyaDcvM1A3OTc4L1pQRS92eitQR0xIOXZmbTlQakJuZmpIcjcrWFlNL1hELzV6MisrKzllcmg1Ly8rc1FPZVBqNjk0bjlQWXorMjR4LytPTGZuODh4ODJQMUJhbW9VMzl6RFc0ZWhOc05hTWJjY0dMZmY1eXRocEMwOFltZ2g2dkJkQVcwNSs0cHVYanQ1cmRHMlBoVm81SjdPSDc2djBkbTZ4ZTRKTHllS0F4Wm1hNDFYVWMycjFDWWJNTytUbmNmRFU0ZXlVK3MrZnZKNnVrNmVmUWRkM3h1aEZXeXlPQzdZcGI5OENkUjN5ZHJ6WitzdFBiZm15dmROdDBPdWs1SFhQMnFLQUZTV01iVHlDM2tNdSsxbXpSUW1pMWJQWDE2VWZaR0RLTzlub09kK0dBQldyL1dVdnRCL1Z4eWg2ejg3SnYvQXlzby95N2NGd0FBIn0= -->
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["City"],"name":[1],"type":["fctr"],"align":["left"]},{"label":["Population"],"name":[2],"type":["int"],"align":["right"]},{"label":["Latitude"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Longitude"],"name":[4],"type":["dbl"],"align":["right"]}],"data":[{"1":"Abbotsford","2":"139900","3":"49.06","4":"-122.30","_rn_":"1"},{"1":"Acton","2":"8100","3":"43.63","4":"-80.03","_rn_":"2"},{"1":"Airdrie","2":"22500","3":"51.30","4":"-114.02","_rn_":"3"},{"1":"Aldergrove","2":"12000","3":"49.06","4":"-122.50","_rn_":"4"},{"1":"Alliston","2":"10100","3":"44.15","4":"-79.87","_rn_":"5"},{"1":"Alma","2":"29100","3":"48.55","4":"-71.66","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10],"total":[4]},"rows":{"min":[10],"max":[10],"total":[6]},"pages":{}}}
+  </script>
+</div>
+<!-- rnb-frame-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>So that appears to have worked!</p>
+</div>
+<div id="more" class="section level2">
+<h2>more…</h2>
+<p>Let’s say that you want to make a road trip to see a lot of Canada and want to start and stop in a major city. You want to pick two of the largest five cities as start and stop of the roadtrip, and then decide on what places to stop on the way. But first, you should figure out the five largest cities.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2l0aWVzWzE6NSxdXG5gYGAifQ== -->
+<pre class="r"><code>cities[1:5,]</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbImRhdGEuZnJhbWUiXSwibmNvbCI6NSwibnJvdyI6NX0sInJkZiI6Ikg0c0lBQUFBQUFBQUExMVNNVXZEUUJSK1NSTnRBMVpCQndkeEZxUUZkVlVJYUt1Q29xMGlIWXB3SnFjVzA3dHd2YlRWU1JCZC9SRTY2eVE0RmwzY0ZYUjFWa2NkMWJzMEYyc09rbnZmdS9lOWUrKzdWMTZvVEZzVkN3QjBTQmtHNkNsaEdycjRhV0JBUnU1dGdOU3dNRXp4RFVTN0ZoTEVnWXlPZkVQaDNpWDFiMUpHQ2FjUlRLOEt3RER5SXB6WlFzU2hRUk16RlQrUHZEM0VEaVBZdDhZNWFxSDR3Z0p2dzlUMU80eVpUNUF0emNMQTVLandaK1daWFhpY2tjc3UzcDFYSno3djdhV0xaMnZPdjdTWHozYmxzb3MzOHVCTHhYYzJYa3B2cCtPM25iSjc5THA0TmRMWmZ1amk2a25JNjVRL2ZKa2hvWUpKVUIwM0VsMGFaVVFPbEQxZjQ2cDhhNTM2Z1lkNGpSSWx3SXBBUEhDeEVtQ0ZrcjJ1NC84OUdVWmJlWFdYYkY0L2huQ1p5WUljRHpWVVFjcHB1WWlqL0M0VGZJRytFNVIrNnN1U0JFbVg3NWxPa0NHQk5TWXpSbzhOQ2JzM2NEQWdzbUkzNSt3SDVDQTMzUk9xUlYxb1BmT2ovWFdqLzBTcDBxcEVoOWJybUhBMUIxaW9SSlJvSm1hTXFva3hjRE1lSjlORE8xaUJyRkF3RkREdnMxcWN5UkxlUnA1VEhwTXNoM3JLRTJvRjM3OEd2MzdZRFFNQUFBPT0ifQ== -->
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["Rank"],"name":[1],"type":["int"],"align":["right"]},{"label":["City"],"name":[2],"type":["chr"],"align":["left"]},{"label":["Population"],"name":[3],"type":["int"],"align":["right"]},{"label":["Latitude"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Longitude"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"1","2":"Toronto","3":"4551800","4":"43.65","5":"-79.38","_rn_":"1"},{"1":"2","2":"Montreal","3":"3256300","4":"45.52","5":"-73.57","_rn_":"2"},{"1":"3","2":"Vancouver","3":"1836500","4":"49.28","5":"-123.13","_rn_":"3"},{"1":"4","2":"Calgary","3":"938300","4":"51.05","5":"-114.06","_rn_":"4"},{"1":"5","2":"Ottawa","3":"863000","4":"45.42","5":"-75.71","_rn_":"5"}],"options":{"columns":{"min":{},"max":[10],"total":[5]},"rows":{"min":[10],"max":[10],"total":[5]},"pages":{}}}
+  </script>
+</div>
+<!-- rnb-frame-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>OK, so there is latitude and longitude as position information. We should figure out how we can use those to determine the distance in kilometers between the cities.</p>
+<p>After some Googling, you have decided that using the <code>geosphere</code> package would be easiest. This package has a function <code>distm()</code> that returns a distance matrix, and you just have to pick the largest value from that. Let’s first install the package:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaW5zdGFsbC5wYWNrYWdlcygnZ2Vvc3BoZXJlJylcbmBgYCJ9 -->
+<pre class="r"><code>install.packages('geosphere')</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3IgaW4gaW5zdGFsbC5wYWNrYWdlcyA6IFVwZGF0aW5nIGxvYWRlZCBwYWNrYWdlc1xuIn0= -->
+<pre><code>Error in install.packages : Updating loaded packages</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>If you were successfull, you can now make sure that the functionality of the package is available to you with this command:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShnZW9zcGhlcmUpXG5gYGAifQ== -->
+<pre class="r"><code>library(geosphere)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>And now you can look at the help file for the <code>distm()</code> function:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaGVscChkaXN0bSlcbmBgYCJ9 -->
+<pre class="r"><code>help(distm)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>As you can see, the function needs longitude/latitude input, and you decide to create a matrix with the cities in the rows and longitude in the first and latitude in the second column. Change this chunk to only use the first five cities</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucG9zaXRpb25zIDwtIGFzLm1hdHJpeChjaXRpZXNbLGMoXCJMb25naXR1ZGVcIixcIkxhdGl0dWRlXCIpXSlcbnBvc2l0aW9uc1xuYGBgIn0= -->
+<pre class="r"><code>positions &lt;- as.matrix(cities[,c(&quot;Longitude&quot;,&quot;Latitude&quot;)])
+positions</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>You think the positions matrix is ready for the <code>distm()</code> function, so let’s try it:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGlzdGFuY2VzIDwtIGRpc3RtKHBvc2l0aW9ucylcbmRpc3RhbmNlc1xuYGBgIn0= -->
+<pre class="r"><code>distances &lt;- distm(positions)
+distances</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICAgICAgICAgIFssMV0gICAgICBbLDJdICAgICAgWywzXSAgICAgIFssNF0gICAgICBbLDVdXG5bMSxdICAgICAgIDAuMCAgNTA1ODY4LjIgMzM2OTMxMi41IDI3MTc1OTguOSAgMzUxNzU3LjRcblsyLF0gIDUwNTg2OC4yICAgICAgIDAuMCAzNjk2NjgyLjYgMzAyNjkxNi40ICAxNjc3MTAuN1xuWzMsXSAzMzY5MzEyLjUgMzY5NjY4Mi42ICAgICAgIDAuMCAgNjc2Nzg1LjYgMzU0OTA3OS4wXG5bNCxdIDI3MTc1OTguOSAzMDI2OTE2LjQgIDY3Njc4NS42ICAgICAgIDAuMCAyODgyMDk0LjJcbls1LF0gIDM1MTc1Ny40ICAxNjc3MTAuNyAzNTQ5MDc5LjAgMjg4MjA5NC4yICAgICAgIDAuMFxuIn0= -->
+<pre><code>          [,1]      [,2]      [,3]      [,4]      [,5]
+[1,]       0.0  505868.2 3369312.5 2717598.9  351757.4
+[2,]  505868.2       0.0 3696682.6 3026916.4  167710.7
+[3,] 3369312.5 3696682.6       0.0  676785.6 3549079.0
+[4,] 2717598.9 3026916.4  676785.6       0.0 2882094.2
+[5,]  351757.4  167710.7 3549079.0 2882094.2       0.0</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Now you could find the largest distance here by hand, but let’s automate as well. You could simply ask for the <code>max()</code> of the distance matrix:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubWF4KGRpc3RhbmNlcylcbmBgYCJ9 -->
+<pre class="r"><code>max(distances)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDM2OTY2ODNcbiJ9 -->
+<pre><code>[1] 3696683</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>That will be a long road-trip! Expecially since the road is probably not a straight line. However, you want to know which two cities this distance belongs to:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxud2hpY2gubWF4KGRpc3RhbmNlcylcbmBgYCJ9 -->
+<pre class="r"><code>which.max(distances)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIDhcbiJ9 -->
+<pre><code>[1] 8</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>But that treats the matrix as a vector, and simply gives a single position. You use Google some more and find this solution:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxud2hpY2goZGlzdGFuY2VzID09IG1heChkaXN0YW5jZXMpLCBhcnIuaW5kID0gVFJVRSlcbmBgYCJ9 -->
+<pre class="r"><code>which(distances == max(distances), arr.ind = TRUE)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiICAgICByb3cgY29sXG5bMSxdICAgMyAgIDJcblsyLF0gICAyICAgM1xuIn0= -->
+<pre><code>     row col
+[1,]   3   2
+[2,]   2   3</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Since there are only five cities you can easily look up which two those are, but let’s automate this as well:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudW5pcXVlKGNpdGllcyRDaXR5W3doaWNoKGRpc3RhbmNlcyA9PSBtYXgoZGlzdGFuY2VzKSwgYXJyLmluZCA9IFRSVUUpXSlcbmBgYCJ9 -->
+<pre class="r"><code>unique(cities$City[which(distances == max(distances), arr.ind = TRUE)])</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIFwiVmFuY291dmVyXCIgXCJNb250cmVhbFwiIFxuIn0= -->
+<pre><code>[1] &quot;Vancouver&quot; &quot;Montreal&quot; </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Alright! You will be going from Vancouver to Montreal… Now let’s see if you had searched in the 50 largest cities in Canada:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGlzdDUwIDwtIGRpc3RtKGFzLm1hdHJpeChjaXRpZXNbYygxOjUwKSxjKFwiTG9uZ2l0dWRlXCIsXCJMYXRpdHVkZVwiKV0pKVxudW5pcXVlKGNpdGllcyRDaXR5W3doaWNoKGRpc3Q1MCA9PSBtYXgoZGlzdDUwKSwgYXJyLmluZCA9IFRSVUUpXSlcbmBgYCJ9 -->
+<pre class="r"><code>dist50 &lt;- distm(as.matrix(cities[c(1:50),c(&quot;Longitude&quot;,&quot;Latitude&quot;)]))
+unique(cities$City[which(dist50 == max(dist50), arr.ind = TRUE)])</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiWzFdIFwiTmFuYWltb1wiICAgICAgXCJTYWludCBqb2huJ3NcIlxuIn0= -->
+<pre><code>[1] &quot;Nanaimo&quot;      &quot;Saint john's&quot;</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Now you had a 50 x 50 matrix with 1225 distances and you feel good for having automated this tedious task. However, you really don’t want to go from Nanaimo to Saint John’s, so you stick with your original plan.</p>
+<!-- rnb-text-end -->
+</div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAnVHV0b3JpYWwgRm91cjogUmVhZGluZyAmIFdyaXRpbmcgRGF0YSBGaWxlcycKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6IGRlZmF1bHQKICBodG1sX2RvY3VtZW50OgogICAgZGZfcHJpbnQ6IHBhZ2VkCiAgcGRmX2RvY3VtZW50OiBkZWZhdWx0Ci0tLQoKYGBge3Igc2V0dXAsIGNhY2hlPUZBTFNFLCBpbmNsdWRlPUZBTFNFfQpsaWJyYXJ5KGtuaXRyKQpvcHRzX2NodW5rJHNldChjb21tZW50PScnLCBldmFsPUZBTFNFKQpgYGAKCkluIHRoZSBsYXN0IHR1dG9yaWFsIHlvdSBzYXcgaG93IGRhdGEgY2FuIGJlIHJlcHJlc2VudGVkIGluIGRhdGEgZnJhbWVzLiBCdXQgb2YgY291cnNlIHlvdSBkb24ndCB3YW50IHRvIGtlZXAgdXNpbmcgZXhhbXBsZSBkYXRhIGZyYW1lcyB0aGF0IGNvbWUgd2l0aCBSLiBZb3Ugd2FudCB0byB1c2UgeW91ciBvd24gZGF0YS4gU28gaGVyZSB5b3Ugd2lsbCBsZWFybiBob3cgdG8gbG9hZCBkYXRhIGZyb20gZXhpc3RpbmcgZmlsZXMgYW5kIGhvdyB0byBzdG9yZSBkYXRhIGZyYW1lcyBpbiBuZXcgZmlsZXMuIFRoZXJlIGFyZSBzZXZlcmFsIHVzZWZ1bCBmb3JtYXRzLCBidXQgaGVyZSB0aGUgZm9jdXMgaXMgb24gQ1NWIGZpbGVzLiBDU1Ygc3RhbmRzIGZvciAnY29tbWEgc2VwYXJhdGVkIHZhbHVlcycsIGFzIHRoaXMgaXMgdGhlIHdheSBkYXRhIGlzIHN0b3JlZCBpbiB0aG9zZSBmaWxlcy4gVGhlIGFkdmFudGFnZSBvZiB1c2luZyBDU1YgZmlsZXMgaXMgdGhhdCB0aGV5IGFyZSByZWxhdGl2ZWx5IGVhc3kgdG8gY3JlYXRlIGJ1dCBjYW4gYWxzbyBiZSB1c2VkIHdpdGggb2ZmaWNlIHNvZnR3YXJlIGxpa2UgRXhjZWwgb3IgU1BTUywgYW5kIGJ5IG1vc3Qgc2NyaXB0aW5nIG9yIHByb2dyYW1taW5nIGxhbmd1YWdlcywgbGlrZSBSIG9yIFB5dGhvbi4gVGhhdCBzYWlkLCBtb3N0IHByaW5jaXBsZXMgb2YgcmVhZGluZyBhbmQgd3JpdGluZyBmaWxlcyBob2xkIGZvciBvdGhlciBmaWxlIHR5cGVzIGFzIHdlbGwgYW5kIFIgY29tZXMgd2l0aCB0aGUgY2FwYWJpbGl0eSwgb3IgY2FuIGJlIGV4dGVuZGVkLCB0byBoYW5kbGUgbWFueSBkaWZmZXJlbnQgZmlsZSB0eXBlcy4KCnRhZ2VvIGRhdGFzZXQgb24gQ2FuYWRpYW4gY2l0aWVzPyAoZGF0YSBmcm9tIDIwMDApCgpvciB0aGUgZmlsZSB0aGF0IGNhbiBiZSBkb3dubG9hZGVkIGZyb20gaGVyZToKCmh0dHBzOi8vd3d3Lm1heG1pbmQuY29tL2VuL2ZyZWUtd29ybGQtY2l0aWVzLWRhdGFiYXNlCgo=</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAnVHV0b3JpYWwgRm91cjogUmVhZGluZyAmIFdyaXRpbmcgRGF0YSBGaWxlcycKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6IGRlZmF1bHQKICBodG1sX2RvY3VtZW50OgogICAgZGZfcHJpbnQ6IHBhZ2VkCiAgcGRmX2RvY3VtZW50OiBkZWZhdWx0Ci0tLQoKYGBge3Igc2V0dXAsIGNhY2hlPUZBTFNFLCBpbmNsdWRlPUZBTFNFfQpsaWJyYXJ5KGtuaXRyKQpvcHRzX2NodW5rJHNldChjb21tZW50PScnLCBldmFsPUZBTFNFKQpzZXR3ZChkaXJuYW1lKHJzdHVkaW9hcGk6OmdldEFjdGl2ZURvY3VtZW50Q29udGV4dCgpJHBhdGgpKQpgYGAKCkluIHRoZSBsYXN0IHR1dG9yaWFsIHlvdSBzYXcgaG93IGRhdGEgY2FuIGJlIHJlcHJlc2VudGVkIGluIGRhdGEgZnJhbWVzLiBCdXQgb2YgY291cnNlIHlvdSBkb24ndCB3YW50IHRvIGtlZXAgdXNpbmcgZXhhbXBsZSBkYXRhIGZyYW1lcyB0aGF0IGNvbWUgd2l0aCBSLiBZb3Ugd2FudCB0byB1c2UgeW91ciBvd24gZGF0YS4gU28gaGVyZSB5b3Ugd2lsbCBsZWFybiBob3cgdG8gbG9hZCBkYXRhIGZyb20gZXhpc3RpbmcgZmlsZXMgYW5kIGhvdyB0byBzdG9yZSBkYXRhIGZyYW1lcyBpbiBuZXcgZmlsZXMuIFRoZXJlIGFyZSBzZXZlcmFsIHVzZWZ1bCBmb3JtYXRzLCBidXQgaGVyZSB0aGUgZm9jdXMgaXMgb24gQ1NWIGZpbGVzLiBDU1Ygc3RhbmRzIGZvciAnY29tbWEgc2VwYXJhdGVkIHZhbHVlcycsIGFzIHRoaXMgaXMgdGhlIHdheSBkYXRhIGlzIHN0b3JlZCBpbiB0aG9zZSBmaWxlcy4gVGhlIGFkdmFudGFnZSBvZiB1c2luZyBDU1YgZmlsZXMgaXMgdGhhdCB0aGV5IGFyZSByZWxhdGl2ZWx5IGVhc3kgdG8gY3JlYXRlIGJ1dCBjYW4gYWxzbyBiZSB1c2VkIHdpdGggb2ZmaWNlIHNvZnR3YXJlIGxpa2UgRXhjZWwgb3IgU1BTUywgYW5kIGJ5IG1vc3Qgc2NyaXB0aW5nIG9yIHByb2dyYW1taW5nIGxhbmd1YWdlcywgbGlrZSBSIG9yIFB5dGhvbi4gVGhhdCBzYWlkLCBtb3N0IHByaW5jaXBsZXMgb2YgcmVhZGluZyBhbmQgd3JpdGluZyBmaWxlcyBob2xkIGZvciBvdGhlciBmaWxlIHR5cGVzIGFzIHdlbGwgYW5kIFIgY29tZXMgd2l0aCB0aGUgY2FwYWJpbGl0eSwgb3IgY2FuIGJlIGV4dGVuZGVkLCB0byBoYW5kbGUgbWFueSBkaWZmZXJlbnQgZmlsZSB0eXBlcy4KCkFsb25nIHRoZSB3YXksIHlvdSB3aWxsIGxlYXJuIGEgbGl0dGxlIG1vcmUgYWJvdXQgaG93IHRvIG1hbmlwdWxhdGUgZGF0YSBmcmFtZXMuCgpXaXRoIHRoaXMgdHV0b3JpYWwgeW91IHNob3VsZCBoYXZlIGRvd25sb2FkZWQgYSBmaWxlICgiY2l0aWVzX2NhbmFkYS5jc3YiKSB0aGF0IHlvdSBjYW4gdXNlIHRvIHByYWN0aWNlLiBJdCBpcyBvcGVuIGRhdGEgZnJvbSB0YWdlby5jb20gb24gdGhlIGxhcmdlc3QgMzAwIGNpdGllcyBhbmQgdG93bnMgaW4gQ2FuYWRhLiBUaGUgZGF0YSBpcyBmcm9tIHRoZSB5ZWFyIDIwMDAsIHNvIGl0IGlzIGEgYml0IGRhdGVkLiAKCllvdSBjYW4gb3BlbiB0aGlzIGZpbGUgb3V0c2lkZSBvZiBSLCBmb3IgZXhhbXBsZSB3aXRoIGEgdGV4dCBlZGl0b3Igb3IgYSBzcHJlYWRzaGVldCBwcm9ncmFtLiBVc2luZyBhIHdvcmQgcHJvY2Vzc29yIGlzIG5vdCBhZHZpc2FibGUuIFlvdSBzaG91bGQgdHJ5IHRoaXMgcmlnaHQgbm93IHRvIHNlZSB3aHkgQ1NWIGZpbGVzIGFyZSBzbyB1c2VmdWw6IHlvdSBjYW4gb3BlbiB0aGVtIHdpdGggbWFueSBkaWZmZXJlbnQgcHJvZ3JhbXMgb24gYWxtb3N0IGFueSBjb21wdXRlciwgYW5kIHlvdSBjYW4gZXZlbiByZWFkIHRoZW0geW91cnNlbGYuCgojIyBSZWFkaW5nIGEgQ1NWIGZpbGUKCkxldCdzIHJlYWQgdGhlIGZpbGUncyBjb250ZW50IGludG8gUjoKCmBgYHtyfQpjaXRpZXMgPC0gcmVhZC5jc3YoJ2NpdGllc19jYW5hZGEuY3N2Jywgc3RyaW5nc0FzRmFjdG9ycz1GKQpgYGAKCllvdSBoYXZlIHVzZWQgdGhlIGZ1bmN0aW9uIGByZWFkLmNzdigpYCB0byByZWFkIGluIHRoZSBjc3YgZmlsZS4gWW91IGhhdmUgdG8gcHJvdmlkZSBpdCB0aGUgZmlsZW5hbWUsIGFuZCBpbiB0aGlzIGNhc2UgdGhlcmUgaXMgb25lIGNvbHVtbiB3aXRoIHN0cmluZyB2YXJpYWJsZXMsIHRoZSBuYW1lcyBvZiB0aGUgY2l0aWVzLCBidXQgeW91IGRvbid0IHdhbnQgdGhhdCB0byBiZSBhICJmYWN0b3IiLgoKU2luY2UgdGhlIHZhcmlhYmxlIGBjaXRpZXNgIGdvdCB0aGUgb3V0cHV0IG9mIHRoZSBgcmVhZC5jc3YoKWAgZnVuY3Rpb24sIGl0IHNob3VsZCBub3cgYmUgYSBkYXRhIGZyYW1lIGFuZCB5b3UgY2FuIHVzZSBgc3RyKClgIGFuZCBvdGhlcnMgdG8gaGF2ZSBhIGxvb2sgYXQgaXQuIENvbXBsZXRlIHRoZSBmb2xsb3dpbmcgY2h1bmsgdG8gZXhhbWluZSB0aGUgc3RydWN0dXJlIG9mIHRoZSBkYXRhIGZyYW1lIGBjaXRpZXNgOgoKYGBge3J9CnN0cigpCmBgYAoKWW91J2xsIHNlZSB0aGF0IHRoZXJlIGFyZSAzMDAgb2JzZXJ2YXRpb25zIChyb3dzKSBhbmQgNSB2YXJpYWJsZXMgKGNvbHVtbnMpLiBUaGUgZmlyc3QgaXMgcmFuaywgd2hpY2ggcHV0cyB0aGUgY2l0aWVzIGluIHRoZSBvcmRlciBvZiBzaXplOiBsYXJnZXN0IGZpcnN0LgoKSG93ZXZlciwgeW91IGRvbid0IHdhbnQgdGhlIHJhbmsgY29sdW1uLCBhcyBpdCBpcyBwcmFjdGljYWxseSBnaXZlbiBieSB0aGUgcG9wdWxhdGlvbiBjb2x1bW4uIFlvdSdkIHJhdGhlciBoYXZlIHRoZSBjaXRpZXMgc29ydGVkIGJ5IG5hbWUgYXMgd2VsbC4gQWZ0ZXIgbWFraW5nIHRoZXNlIGNoYW5nZXMgdG8gdGhlIGRhdGEgZnJhbWUsIHlvdSB3aWxsIHN0b3JlIHRoZSBkYXRhIGZyYW1lIGluIGEgbmV3IGZpbGUuCgpGaXJzdCB5b3UgZGVjaWRlIHRvIHJlbW92ZSB0aGUgUmFuayBjb2x1bW4uIFlvdSBjYW4gdXNlIHRoZSBgc3Vic2V0KClgIGZ1bmN0aW9uIGZvciB0aGF0LCB3aGl0aCB0aGUgYHNlbGVjdGAgYXJndW1lbnQgdG8gaW5kaWNhdGUgd2hpY2ggY29sdW1ucyB5b3Ugd2FudC4gQnkgcHJlcGVuZGluZyB0aGF0IHdpdGggYSBtaW51cyBzeW1ib2wsIHRob3NlIGNvbHVtbnMgYXJlIG5vdCBrZXB0LCBidXQgcmVtb3ZlZCBpbnN0ZWFkLgoKYGBge3J9Cm15X2NpdGllcyA8LSBzdWJzZXQoY2l0aWVzLCBzZWxlY3Q9LWMoUmFuaykpCmBgYAoKTGV0J3Mgc2VlIGlmIHRoYXQgd29ya2VkIGFzIGV4cGVjdGVkLCBmaXggdGhlIGNodW5rIGJlbG93LiBZb3Ugd29uJ3QgZ2V0IGFuIGVycm9yIG1lc3NhZ2UsIGJ1dCBpdCBpcyBzdGlsbCBpbmNvcnJlY3QhCgpgYGB7cn0Kc3RyKGNpdGllcykKYGBgCgpOb3cgdGhhdCB0aGF0J3MgZG9uZSwgeW91IHdhbnQgdG8gc29ydCB0aGUgZGF0YSBmcmFtZSBhbHBoYWJldGljYWxseS4gVGhhdCBtZWFucyB5b3Ugd2FudCB0byB1c2UgYWxsIHJvd3MsIGluIHRoZSBvcmRlciBnaXZlbiBieSB0aGUgY29sdW1uIENpdHkuIFlvdSBjYW4gdXNlIHRoZSBgb3JkZXIoKWAgZnVuY3Rpb24gdG8gZ2V0IGEgbGlzdCBvZiBpbmRpY2VzIHRoYXQgd291bGQgc29ydCB0aGUgbGlzdCBwcm92aWRlZCBhcyBpbnB1dCB0byB0aGUgZnVuY3Rpb24uIE1ha2Ugc3VyZSB0aGlzIGNodW5rIG9ubHkgdXNlcyB0aGUgQ2l0eSBjb2x1bW46CgpgYGB7cn0KYWxwaGFiZXRpY2FsX2NpdGllcyA8LSBvcmRlcihteV9jaXRpZXMpCmFscGhhYmV0aWNhbF9jaXRpZXMKYGBgCgpXaGF0IGRvZXMgdGhpcyBtZWFuPyBUaGUgZmlyc3QgY2l0eSBhZnRlciBhbHBoYWJldGljYWwgc29ydGluZyBoYWQgaW5kZXggMjEgaW4gdGhlIG9yaWdpbmFsIGxpc3QuIFRvcm9udG8gd2FzIG9yaWdpbmFsbHkgb24gc3BvdCAxLCBidXQgd2lsbCBub3cgZW5kIHVwIG9uIHNwb3QgMjcwLgoKYGBge3J9Cm15X2NpdGllcyA8LSBteV9jaXRpZXNbYWxwaGFiZXRpY2FsX2NpdGllcyxdCnN0cihteV9jaXRpZXMpCmBgYAoKTGV0J3MgY2hlY2sgaWYgdGhlIHdob2xlIGRhdGEgZnJhbWUgd2FzIHNvcnRlZCBieSBsb29raW5nIGF0IEFiYm90c2ZvcmQgaW4gdGhlIG9yaWdpbmFsIGFuZCBpbiB0aGUgbmV3IGRhdGEgZnJhbWUuIEl0IHNob3VsZCBoYXZlIHRoZSBzYW1lIHBvcHVsYXRpb24sIGxhdGl0dWRlIGFuZCBsb25naXR1ZGU6CgpgYGB7cn0KY2l0aWVzW3doaWNoKGNpdGllcyRDaXR5ID09ICdBYmJvdHNmb3JkJyksXQpgYGAKCkFuZCBpbiB0aGUgbmV3IGRhdGEgZnJhbWUgKGNvbXBsZXRlIHRoaXMgY2h1bmspOgoKYGBge3J9Cm15X2NpdGllc1t3aGljaChjaXRpZXMkQ2l0eSA9PSAnQWJib3RzZm9yZCcpLF0KYGBgCgojIyBXcml0ZSBDVlMgZmlsZXMKCllvdSBhcmUgaGFwcHkgd2l0aCB0aGlzIG5ldyBkYXRhIGZyYW1lLCBzbyB3ZSBzaG91bGQgc3RvcmUgaXQuIEZvciB0aGlzLCB5b3UgY2FuIHVzZSB0aGUgZnVuY3Rpb24gYHdyaXRlLmNzdigpYC4gTGV0J3MgbG9vayB1cCB0aGUgaGVscCBmb3IgdGhpcyBmdW5jdGlvbjoKCmBgYHtyfQpoZWxwKHdyaXRlLmNzdikKYGBgCgpTbyB0aGUgZmlyc3QgYXJndW1lbnQgaXMgdGhlIGRhdGEgZnJhbWUgYG15X2NpdGllc2AgYW5kIHRoZW4geW91IG5lZWQgdG8gc3BlY2lmeSBhIGZpbGUgbmFtZS4gSXQgcmFyZWx5IG1ha2VzIHNlbnNlIHRvIHVzZSBxdW90YXRpb24gbWFya3MgZm9yIHRleHQgZGF0YSBvciB0byBzdG9yZSByb3cgbmFtZXMsIHNvIGl0IF9kb2VzXyBtYWtlIHNlbnNlIHRvIGxlYXJuIGhvdyB0byBub3Qgc3RvcmUgdGhvc2U6CgpgYGB7cn0Kd3JpdGUuY3N2KG15X2NpdGllcywgZmlsZT0nbXlfY2l0aWVzLmNzdicsIHF1b3RlPUZBTFNFLCByb3cubmFtZXM9RkFMU0UpCmBgYAoKSWYgeW91IGNoZWNrIHRoZSAqKkVudmlyb25tZW50KiogdGFiLCB5b3Ugd2lsbCBzZWUgdGhlcmUgaXMgYSBkYXRhIGZyYW1lIGNhbGxlZCBgbXlfY2l0aWVzYCB3aXRoIDMwMCBvYnNlcnZhdGlvbnMgb2YgNCB2YXJpYWJsZXMuIFlvdSB3aWxsIG5vdyByZW1vdmUgdGhhdCBkYXRhIGZyYW1lIGZyb20gbWVtb3J5IGFuZCB0aGVuIGxvYWQgaXQgZnJvbSB0aGUgZmlsZS4KCllvdSBjYW4gcmVtb3ZlIG9iamVjdHMgZnJvbSBtZW1vcnkgYnkgdXNpbmcgdGhlIGBybSgpYCBmdW5jdGlvbi4gRml4IHRoZSBjb2RlIGNodW5rIGJlbG93IHRvIHJlbW92ZSBgbXlfY2l0aWVzYDoKCmBgYHtyfQpybShjaXRpZXMpCmBgYAoKWW91IGNhbiBhbHNvIHVzZSBgcm0oKWAgdG8gcmVtb3ZlIGFsbW9zdCBldmVyeXRoaW5nIGZyb20gbWVtb3J5LiBDaGVjayB0aGUgaGVscCBmaWxlIGZvciBgcm0oKWAgdG8gc2VlIGhvdy4KCk5vdyB5b3UgY2FuIGxvYWQgdGhlIGNvbnRlbnRzIG9mIGBteV9jaXRpZXMuY3N2YCBhZ2FpbjoKCmBgYHtyfQpteV9jaXRpZXMgPC0gcmVhZC5jc3YoJ215X2NpdGllcy5jc3YnKQpoZWFkKG15X2NpdGllcykKYGBgCgpTbyB0aGF0IGFwcGVhcnMgdG8gaGF2ZSB3b3JrZWQhCgoKCgoKCgoKCgoKCgoKCgoKCiMjIG1vcmUuLi4KCkxldCdzIHNheSB0aGF0IHlvdSB3YW50IHRvIG1ha2UgYSByb2FkIHRyaXAgdG8gc2VlIGEgbG90IG9mIENhbmFkYSBhbmQgd2FudCB0byBzdGFydCBhbmQgc3RvcCBpbiBhIG1ham9yIGNpdHkuIFlvdSB3YW50IHRvIHBpY2sgdHdvIG9mIHRoZSBsYXJnZXN0IGZpdmUgY2l0aWVzIGFzIHN0YXJ0IGFuZCBzdG9wIG9mIHRoZSByb2FkdHJpcCwgYW5kIHRoZW4gZGVjaWRlIG9uIHdoYXQgcGxhY2VzIHRvIHN0b3Agb24gdGhlIHdheS4gQnV0IGZpcnN0LCB5b3Ugc2hvdWxkIGZpZ3VyZSBvdXQgdGhlIGZpdmUgbGFyZ2VzdCBjaXRpZXMuCgpgYGB7cn0KY2l0aWVzWzE6NSxdCmBgYAoKT0ssIHNvIHRoZXJlIGlzIGxhdGl0dWRlIGFuZCBsb25naXR1ZGUgYXMgcG9zaXRpb24gaW5mb3JtYXRpb24uIFdlIHNob3VsZCBmaWd1cmUgb3V0IGhvdyB3ZSBjYW4gdXNlIHRob3NlIHRvIGRldGVybWluZSB0aGUgZGlzdGFuY2UgaW4ga2lsb21ldGVycyBiZXR3ZWVuIHRoZSBjaXRpZXMuCgpBZnRlciBzb21lIEdvb2dsaW5nLCB5b3UgaGF2ZSBkZWNpZGVkIHRoYXQgdXNpbmcgdGhlIGBnZW9zcGhlcmVgIHBhY2thZ2Ugd291bGQgYmUgZWFzaWVzdC4gVGhpcyBwYWNrYWdlIGhhcyBhIGZ1bmN0aW9uIGBkaXN0bSgpYCB0aGF0IHJldHVybnMgYSBkaXN0YW5jZSBtYXRyaXgsIGFuZCB5b3UganVzdCBoYXZlIHRvIHBpY2sgdGhlIGxhcmdlc3QgdmFsdWUgZnJvbSB0aGF0LiBMZXQncyBmaXJzdCBpbnN0YWxsIHRoZSBwYWNrYWdlOgoKYGBge3J9CiMgaW5zdGFsbC5wYWNrYWdlcygnZ2Vvc3BoZXJlJykKYGBgCgpJZiB5b3Ugd2VyZSBzdWNjZXNzZnVsbCwgeW91IGNhbiBub3cgbWFrZSBzdXJlIHRoYXQgdGhlIGZ1bmN0aW9uYWxpdHkgb2YgdGhlIHBhY2thZ2UgaXMgYXZhaWxhYmxlIHRvIHlvdSB3aXRoIHRoaXMgY29tbWFuZDoKCmBgYHtyfQpsaWJyYXJ5KGdlb3NwaGVyZSkKYGBgCgpBbmQgbm93IHlvdSBjYW4gbG9vayBhdCB0aGUgaGVscCBmaWxlIGZvciB0aGUgYGRpc3RtKClgIGZ1bmN0aW9uOgoKYGBge3J9CmhlbHAoZGlzdG0pCmBgYAoKQXMgeW91IGNhbiBzZWUsIHRoZSBmdW5jdGlvbiBuZWVkcyBsb25naXR1ZGUvbGF0aXR1ZGUgaW5wdXQsIGFuZCB5b3UgZGVjaWRlIHRvIGNyZWF0ZSBhIG1hdHJpeCB3aXRoIHRoZSBjaXRpZXMgaW4gdGhlIHJvd3MgYW5kIGxvbmdpdHVkZSBpbiB0aGUgZmlyc3QgYW5kIGxhdGl0dWRlIGluIHRoZSBzZWNvbmQgY29sdW1uLiBDaGFuZ2UgdGhpcyBjaHVuayB0byBvbmx5IHVzZSB0aGUgZmlyc3QgZml2ZSBjaXRpZXMKCmBgYHtyfQpwb3NpdGlvbnMgPC0gYXMubWF0cml4KGNpdGllc1ssYygiTG9uZ2l0dWRlIiwiTGF0aXR1ZGUiKV0pCnBvc2l0aW9ucwpgYGAKCllvdSB0aGluayB0aGUgcG9zaXRpb25zIG1hdHJpeCBpcyByZWFkeSBmb3IgdGhlIGBkaXN0bSgpYCBmdW5jdGlvbiwgc28gbGV0J3MgdHJ5IGl0OgoKYGBge3J9CmRpc3RhbmNlcyA8LSBkaXN0bShwb3NpdGlvbnMpCmRpc3RhbmNlcwpgYGAKCk5vdyB5b3UgY291bGQgZmluZCB0aGUgbGFyZ2VzdCBkaXN0YW5jZSBoZXJlIGJ5IGhhbmQsIGJ1dCBsZXQncyBhdXRvbWF0ZSBhcyB3ZWxsLiBZb3UgY291bGQgc2ltcGx5IGFzayBmb3IgdGhlIGBtYXgoKWAgb2YgdGhlIGRpc3RhbmNlIG1hdHJpeDoKCmBgYHtyfQptYXgoZGlzdGFuY2VzKQpgYGAKClRoYXQgd2lsbCBiZSBhIGxvbmcgcm9hZC10cmlwISBFeHBlY2lhbGx5IHNpbmNlIHRoZSByb2FkIGlzIHByb2JhYmx5IG5vdCBhIHN0cmFpZ2h0IGxpbmUuIEhvd2V2ZXIsIHlvdSB3YW50IHRvIGtub3cgd2hpY2ggdHdvIGNpdGllcyB0aGlzIGRpc3RhbmNlIGJlbG9uZ3MgdG86CgpgYGB7cn0Kd2hpY2gubWF4KGRpc3RhbmNlcykKYGBgCgpCdXQgdGhhdCB0cmVhdHMgdGhlIG1hdHJpeCBhcyBhIHZlY3RvciwgYW5kIHNpbXBseSBnaXZlcyBhIHNpbmdsZSBwb3NpdGlvbi4gWW91IHVzZSBHb29nbGUgc29tZSBtb3JlIGFuZCBmaW5kIHRoaXMgc29sdXRpb246CgpgYGB7cn0Kd2hpY2goZGlzdGFuY2VzID09IG1heChkaXN0YW5jZXMpLCBhcnIuaW5kID0gVFJVRSkKYGBgCgpTaW5jZSB0aGVyZSBhcmUgb25seSBmaXZlIGNpdGllcyB5b3UgY2FuIGVhc2lseSBsb29rIHVwIHdoaWNoIHR3byB0aG9zZSBhcmUsIGJ1dCBsZXQncyBhdXRvbWF0ZSB0aGlzIGFzIHdlbGw6CgpgYGB7cn0KdW5pcXVlKGNpdGllcyRDaXR5W3doaWNoKGRpc3RhbmNlcyA9PSBtYXgoZGlzdGFuY2VzKSwgYXJyLmluZCA9IFRSVUUpXSkKYGBgCgpBbHJpZ2h0ISBZb3Ugd2lsbCBiZSBnb2luZyBmcm9tIFZhbmNvdXZlciB0byBNb250cmVhbC4uLiBOb3cgbGV0J3Mgc2VlIGlmIHlvdSBoYWQgc2VhcmNoZWQgaW4gdGhlIDUwIGxhcmdlc3QgY2l0aWVzIGluIENhbmFkYToKCmBgYHtyfQpkaXN0NTAgPC0gZGlzdG0oYXMubWF0cml4KGNpdGllc1tjKDE6NTApLGMoIkxvbmdpdHVkZSIsIkxhdGl0dWRlIildKSkKdW5pcXVlKGNpdGllcyRDaXR5W3doaWNoKGRpc3Q1MCA9PSBtYXgoZGlzdDUwKSwgYXJyLmluZCA9IFRSVUUpXSkKYGBgCgpOb3cgeW91IGhhZCBhIDUwIHggNTAgbWF0cml4IHdpdGggMTIyNSBkaXN0YW5jZXMgYW5kIHlvdSBmZWVsIGdvb2QgZm9yIGhhdmluZyBhdXRvbWF0ZWQgdGhpcyB0ZWRpb3VzIHRhc2suIEhvd2V2ZXIsIHlvdSByZWFsbHkgZG9uJ3Qgd2FudCB0byBnbyBmcm9tIE5hbmFpbW8gdG8gU2FpbnQgSm9obidzLCBzbyB5b3Ugc3RpY2sgd2l0aCB5b3VyIG9yaWdpbmFsIHBsYW4uCg==</div>
 
 
 

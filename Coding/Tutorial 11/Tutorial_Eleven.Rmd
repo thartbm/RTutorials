@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Eleven: Open Science Framework'
+title: 'Tutorial Eleven: rticles and preprint servers'
 output:
   html_notebook: default
   html_document:

@@ -10,13 +10,196 @@ output:
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
 
 In the last tutorial you saw how data can be represented in data frames. But of course you don't want to keep using example data frames that come with R. You want to use your own data. So here you will learn how to load data from existing files and how to store data frames in new files. There are several useful formats, but here the focus is on CSV files. CSV stands for 'comma separated values', as this is the way data is stored in those files. The advantage of using CSV files is that they are relatively easy to create but can also be used with office software like Excel or SPSS, and by most scripting or programming languages, like R or Python. That said, most principles of reading and writing files hold for other file types as well and R comes with the capability, or can be extended, to handle many different file types.
 
-tageo dataset on Canadian cities? (data from 2000)
+Along the way, you will learn a little more about how to manipulate data frames.
 
-or the file that can be downloaded from here:
+With this tutorial you should have downloaded a file ("cities_canada.csv") that you can use to practice. It is open data from tageo.com on the largest 300 cities and towns in Canada. The data is from the year 2000, so it is a bit dated. 
 
-https://www.maxmind.com/en/free-world-cities-database
+You can open this file outside of R, for example with a text editor or a spreadsheet program. Using a word processor is not advisable. You should try this right now to see why CSV files are so useful: you can open them with many different programs on almost any computer, and you can even read them yourself.
 
+## Reading a CSV file
+
+Let's read the file's content into R:
+
+```{r}
+cities <- read.csv('cities_canada.csv', stringsAsFactors=F)
+```
+
+You have used the function `read.csv()` to read in the csv file. You have to provide it the filename, and in this case there is one column with string variables, the names of the cities, but you don't want that to be a "factor".
+
+Since the variable `cities` got the output of the `read.csv()` function, it should now be a data frame and you can use `str()` and others to have a look at it. Complete the following chunk to examine the structure of the data frame `cities`:
+
+```{r}
+str()
+```
+
+You'll see that there are 300 observations (rows) and 5 variables (columns). The first is rank, which puts the cities in the order of size: largest first.
+
+However, you don't want the rank column, as it is practically given by the population column. You'd rather have the cities sorted by name as well. After making these changes to the data frame, you will store the data frame in a new file.
+
+First you decide to remove the Rank column. You can use the `subset()` function for that, whith the `select` argument to indicate which columns you want. By prepending that with a minus symbol, those columns are not kept, but removed instead.
+
+```{r}
+my_cities <- subset(cities, select=-c(Rank))
+```
+
+Let's see if that worked as expected, fix the chunk below. You won't get an error message, but it is still incorrect!
+
+```{r}
+str(cities)
+```
+
+Now that that's done, you want to sort the data frame alphabetically. That means you want to use all rows, in the order given by the column City. You can use the `order()` function to get a list of indices that would sort the list provided as input to the function. Make sure this chunk only uses the City column:
+
+```{r}
+alphabetical_cities <- order(my_cities)
+alphabetical_cities
+```
+
+What does this mean? The first city after alphabetical sorting had index 21 in the original list. Toronto was originally on spot 1, but will now end up on spot 270.
+
+```{r}
+my_cities <- my_cities[alphabetical_cities,]
+str(my_cities)
+```
+
+Let's check if the whole data frame was sorted by looking at Abbotsford in the original and in the new data frame. It should have the same population, latitude and longitude:
+
+```{r}
+cities[which(cities$City == 'Abbotsford'),]
+```
+
+And in the new data frame (complete this chunk):
+
+```{r}
+my_cities[which(cities$City == 'Abbotsford'),]
+```
+
+## Write CVS files
+
+You are happy with this new data frame, so we should store it. For this, you can use the function `write.csv()`. Let's look up the help for this function:
+
+```{r}
+help(write.csv)
+```
+
+So the first argument is the data frame `my_cities` and then you need to specify a file name. It rarely makes sense to use quotation marks for text data or to store row names, so it _does_ make sense to learn how to not store those:
+
+```{r}
+write.csv(my_cities, file='my_cities.csv', quote=FALSE, row.names=FALSE)
+```
+
+If you check the **Environment** tab, you will see there is a data frame called `my_cities` with 300 observations of 4 variables. You will now remove that data frame from memory and then load it from the file.
+
+You can remove objects from memory by using the `rm()` function. Fix the code chunk below to remove `my_cities`:
+
+```{r}
+rm(cities)
+```
+
+You can also use `rm()` to remove almost everything from memory. Check the help file for `rm()` to see how.
+
+Now you can load the contents of `my_cities.csv` again:
+
+```{r}
+my_cities <- read.csv('my_cities.csv')
+head(my_cities)
+```
+
+So that appears to have worked!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## more...
+
+Let's say that you want to make a road trip to see a lot of Canada and want to start and stop in a major city. You want to pick two of the largest five cities as start and stop of the roadtrip, and then decide on what places to stop on the way. But first, you should figure out the five largest cities.
+
+```{r}
+cities[1:5,]
+```
+
+OK, so there is latitude and longitude as position information. We should figure out how we can use those to determine the distance in kilometers between the cities.
+
+After some Googling, you have decided that using the `geosphere` package would be easiest. This package has a function `distm()` that returns a distance matrix, and you just have to pick the largest value from that. Let's first install the package:
+
+```{r}
+# install.packages('geosphere')
+```
+
+If you were successfull, you can now make sure that the functionality of the package is available to you with this command:
+
+```{r}
+library(geosphere)
+```
+
+And now you can look at the help file for the `distm()` function:
+
+```{r}
+help(distm)
+```
+
+As you can see, the function needs longitude/latitude input, and you decide to create a matrix with the cities in the rows and longitude in the first and latitude in the second column. Change this chunk to only use the first five cities
+
+```{r}
+positions <- as.matrix(cities[,c("Longitude","Latitude")])
+positions
+```
+
+You think the positions matrix is ready for the `distm()` function, so let's try it:
+
+```{r}
+distances <- distm(positions)
+distances
+```
+
+Now you could find the largest distance here by hand, but let's automate as well. You could simply ask for the `max()` of the distance matrix:
+
+```{r}
+max(distances)
+```
+
+That will be a long road-trip! Expecially since the road is probably not a straight line. However, you want to know which two cities this distance belongs to:
+
+```{r}
+which.max(distances)
+```
+
+But that treats the matrix as a vector, and simply gives a single position. You use Google some more and find this solution:
+
+```{r}
+which(distances == max(distances), arr.ind = TRUE)
+```
+
+Since there are only five cities you can easily look up which two those are, but let's automate this as well:
+
+```{r}
+unique(cities$City[which(distances == max(distances), arr.ind = TRUE)])
+```
+
+Alright! You will be going from Vancouver to Montreal... Now let's see if you had searched in the 50 largest cities in Canada:
+
+```{r}
+dist50 <- distm(as.matrix(cities[c(1:50),c("Longitude","Latitude")]))
+unique(cities$City[which(dist50 == max(dist50), arr.ind = TRUE)])
+```
+
+Now you had a 50 x 50 matrix with 1225 distances and you feel good for having automated this tedious task. However, you really don't want to go from Nanaimo to Saint John's, so you stick with your original plan.
