@@ -1,0 +1,426 @@
+---
+title: 'Tutorial 6: Mixed Design ANOVA'
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='')
+#setwd("~/Desktop/R tutorials/2017/Tutorial 6")
+```
+
+_Dr. Blue recruited a new sample of migraine sufferers. He would now like to know if the dose of the drug (25 mg, 100 mg, 200 mg) in addition to the type of drug (placebo, Drug A, Drug B) would have an effect on the frequency and severity of migraines._
+
+# Exercise A:
+
+_Does the amount of drug taken by the patient affect migraines?_
+
+Let's load the data and get the structure:
+
+```{r}
+load('Tutorial_6_MigraineDosage_long.rda')
+doses.full$drug <- factor(doses.full$drug, 
+                          levels=c('Placebo','DrugA','DrugB'))
+#View(doses.full)
+str(doses.full)
+```
+
+We'll forget the 'group' variable for now.
+
+Let's plot this data:
+
+```{r}
+plot(-1000,-1000,
+     main='Drug Dosage in Migraines', xlab='dosage',ylab='migraines', 
+     xlim=c(0.5,3.5), ylim=c(20,43), xaxt='n')
+# we want to plot one line for each drug:
+for (drug in c(1,2,3)) {
+  # take out only the data for this drug:
+  drugname <- c('Placebo', 'DrugA', 'DrugB')[drug]
+  subset <- doses.full[which(doses.full$drug == drugname),]
+  avgs <- tapply(subset$migraine, INDEX=subset$dose, FUN=mean)
+  stds <- tapply(subset$migraine, INDEX=subset$dose, FUN=sd) / sqrt(50)
+  shift <- c(-0.025, 0, 0.025)[drug]
+  lines(c(1:3)+shift,avgs,lty=drug)
+  points(c(1:3)+shift,avgs)
+  segments(x0=c(1:3)+shift,y0=avgs-stds,y1=avgs+stds)
+}
+legend(1.2,42,c('Placebo', 'DrugA', 'DrugB'),lty=c(1,2,3))
+axis(1,at=c(1:3),labels=unique(doses.full$dose))
+```
+
+At this point you should check the assumption for an ANOVA: normally distributed data, equal variance. Sphericity will be tested while running the ANOVA and violations can usually be corrected for.
+
+The exercise seems to asks about the main effect of dose, and that might have an effect, but it looks like there is an interaction, and then any effect of dose would really depend on the drug. So we'll first have to see if there is an interaction. If there is, we can give an answer with the words 'it depends'. If there is no interaction but a main effect of dose, then we can just say dose has an effect. If there are no effects (except perhaps of drug) then we can say that dose has no effect. Let's do the ANOVA with `ez`.
+
+Because all participants did all drugs in all doses, this is a fully repeated-measures design. When specifying the ANOVA, buth drug and dose should be within-subject factors. Also, I'm setting R's contrasts to `contr.sum` which is suitable for ANOVAs with within-subject factors.
+
+```{r}
+default.contrasts <- options('contrasts')
+# According to some people, you should adhere to the "sum-to-zero convention"
+# for effect weights, and should always enter the following command 
+# before running anovas in R:
+options(contrasts=c('contr.sum','contr.poly'))
+# I've also stored the original setting, 
+# so you could restore that by running this command:
+#options('contrasts' <- default.contrasts)
+library(ez)
+full.dose.model <- ezANOVA(data=doses.full, 
+                           dv=migraine, 
+                           wid=participant, 
+                           within=c(drug, dose), 
+                           type=3, 
+                           return_aov=TRUE)
+print(full.dose.model[1:3]) 
+# this prints only the first three tables, skipping the aov object
+```
+
+Sphericity is violated for terms 3 and 4, so we report Greenhouse-Geisser corrected p-values for those terms, although it doesn't matter much. We could write something like this:
+
+"It seems that the dose of drug might have an effect on migraines (see Fig 1). In order to test this, we ran a repeated-measures ANOVA on a model of migraines, using _drug_ (placebo, drug A, drug B) and _dose_ (25 mg, 100 mg, 200 mg) as within-subjects factors. There was an interaction between _dose_ and _drug_ (F(4,196)=12.43, p<.001, $\eta_p^2$=0.102). There was also a main effect of drug (F(2,98)=4.03, p=.002, $\eta_p^2$=0.016) but no main effect of dose. The results show that dose had an effect on migraines, depending on the drug."
+
+# Exercise B
+
+_Complete the appropriate post hoc analyses. If you were Professor Blue what type of drug and dosage would you recommend to your patients?_
+
+The blurb we wrote above gives some information, but "it depends" asnwers, are not really satisfactory. You can' t really recommend which drug to take at what dose, but that is the information most people would be interested in. So we consider it a first step, and decide to do follow-up tests, or post hoc analyses or whatever you like to call them.
+
+We already did some of those in Tutorial 4, so we can try the same approach. However, I am running it here in a different way that combines all 9 comparisons. This makes it a little more conservative since every comparison is now 1 out of 9 instead of 1 out of 3.
+
+```{r}
+library(estimability)
+library(lsmeans)
+contrast(lsmeans(full.dose.model$aov, specs=c('dose', 'drug')))
+```
+
+But now we run into some limits of this approach. It shows the difference of the dose with the intercept for the drug, and tests if that cell's coefficient is different from the "intercept" (which boils down to the mean migraine score, or the drugs mean migraine score, if we'd still use `~dose|drug`). But that's not really what we're interested in: we want to compare each dose with each other dose - not with some mean.
+
+If you don't set R's contrasts right, the function call will give a warning about biased results.
+
+Alternatively, we could run a TukeyHSD on the aov function, get only the third table, but again that requires running the ANOVA without using the repeated-measures information (try it!). We'd also still get a fairly long table, where we'd only be interested in some of the rows, so we'd have to find those and accept that it controls for many more comparisons (increasing the chance of Type II error). With more factors or more levels within each factor, those tables will quickly explode in size...
+
+So maybe we need something else. I'll showcase a few more ways to do follow-ups here, but there is still debate on what the appropriate method is, and some people think this debate will not be resolved at all (or soon), except perhaps with an answer that includes "it depends on what your research question is". The first few use standard packages but are limited, or not targeted at ANOVAs with any within-subject factor. The last one works especially for ANOVAs with within-subject factors but it is more or less calculated manually.
+
+## Pairwise t-tests to investigate an interaction
+
+We can do pairwise t-tests on subsets of the data. Since we subsetted the data for plotting as well, the blurb of code below might seems familiar to you:
+
+```{r}
+# we want to test dose, given drug:
+for (drug in c(1,2,3)) {
+  # take out only the data for this drug:
+  drugname <- c('Placebo', 'DrugA', 'DrugB')[drug]
+  cat('\n',drugname,'\n')
+  subset <- doses.full[which(doses.full$drug == drugname),]
+  print(pairwise.t.test(subset$migraine, subset$dose, p.adjust.method='bonferroni', paired=TRUE))
+}
+```
+
+OK, so for Placebo, the dose doesn't matter much - which makes sense (I'm not even sure how there is a dose at all). For Drug A, it doesn't matter if you take 100 mg or 200 mg, but 25 mg is different. If we look at the plot, 100 mg and 200 mg both reduce migraines compared to 25 mg. For Drug B, they're all different, and somehow migraines seem to get worse with increasing doses! Maybe it has migraines as a side-effect with larger doses? We could write this up like this:
+
+"To inspect the effect of dose within each treatment, we ran three bonferronni-corrected, paired t-tests. For placebo there is no effect of dose (all p>.99). For Drug A, 25 mg appears more effective than 100 or 200 mg (all p<.005) but there is no difference between 100 mg and 200 mg (p=1.0). For Drug B a dose of 25 mg is more effective then 100 mg or 200 mg (all p<.005) and 200 mg is less effective than 100 mg (p=.041)."
+
+Do we need to compare each of the drugs' effectiveness versus placebo? That is why the Placebo group is in the experiment, so we could compare drugs, given a dose:
+
+```{r}
+# we want to test drug, given dose:
+for (dose in c(25,100,200)) {
+  # take out only the data for this drug:
+  cat('\n',as.character(dose),' mg\n')
+  subset <- doses.full[which(doses.full$dose == dose),]
+  print(pairwise.t.test(subset$migraine, subset$drug, p.adjust.method='bonferroni', paired=TRUE))
+}
+```
+
+Hmmm. Let's try to make sense of that. At 200 mg they are all different from each other (according to our figure Drug B is worst and Drug A best), at 100 mg, neither drug is different from placebo, but Drug A and B differ. At 25 mg, Drug A and placebo are equally effective, but they are both worse than Drug B.
+
+"To compare the effectiveness of each drug with placebo at different doses, we again ran three bonferroni-corrected, paired t-tests. Given a dose of 25 mg, Drug B is more effective than Placebo (p=.034) but Drug A is not (p=.830). Given a dose of 100 mg, neither Drug A or Drug B are more effective than Placebo (all p>.43). Given a dose of 200 mg, Drug A is more effective than Placebo (p=.011) and Drug B less effective (p=.004)."
+
+It seems that for Drug A we'd recommend 200 mg, and 25 mg for Drug B, as they are both better than placebo and each other at those doses. Is one of those two _combinations_ of drug and dose better? We haven't done any test to say anything about this yet, so we should/could do another test:
+
+```{r}
+DrugA_200 <- doses.full$migraine[which(doses.full$drug == 'DrugA' & doses.full$dose == 200)]
+DrugB_25  <- doses.full$migraine[which(doses.full$drug == 'DrugB' & doses.full$dose == 25)]
+t.test(DrugA_200, DrugB_25, paired=TRUE)
+```
+
+The difference in means is exactly 0, so neither would be better (and here it shows that these data are made up). Nevertheless a drug that gets worse with higher doses seems strange, so I would not like recommending it, except in rare cases.
+
+"In general, we would recommend Drug A at 200 mg, and perhaps increase the dose if the result isn't satisfactory. However, if Drug A doesn't work at all, or there are contra-indications, try Drug B at 25 mg, but not higher doses."
+
+Perhaps we could include a warning that we didn't investigate side-effects yet.
+
+## Post-hoc Interaction Analysis
+
+If you think the t-test approach is not kosher, I know of two packages that might help you. One is `phia` for **P**ost-**H**oc **I**nteraction **A**nalysis, and the other is `afex` for **A**nalysis of **F**actorial **EX**periments.
+
+### PHIA
+
+Install and load it:
+
+```{r}
+#install.packages('phia')
+library(phia)
+```
+
+One cool function in `phia` lets you plot interaction data: `interactionMeans()`. This needs a model as input, and the simplest we can use is one generated by `lm()` but I think `aov()` is allowed as well. The output of `interactionMeans()` is then passed onto `plot()`. Here I do this in one line:
+
+```{r}
+plot(interactionMeans(lm(migraine ~ drug * dose - (1|as.numeric(participant)), data=doses.full), factors=c('drug', 'dose'), atx='dose'))
+```
+
+The figure in the top right is the one we've made ourselves before, the documentation says it plots the standard error of the mean by default.
+
+Unfortunately, to do the post-hoc interaction analysis, we need to do the ANOVA using different means. The best way seems to be to use the `Anova()` function (note the capital A!) from the `car` package. It should be possible to do the same ANOVA as `ezANOVA()` gives us, as `ezANOVA()` apparently just passes it on to `Anova()`. Let's first see if that is true.
+
+```{r}
+# just to make sure, I run this command again before doing a new ANOVA:
+options(contrasts=c("contr.sum","contr.poly"))
+library(car)
+help(Anova)
+```
+
+The `Anova()` function takes as main input a model object which can be produced by many different functions. Here, I'll try to use an `lm` object, by first fitting a model with `lm()`.
+
+```{r}
+doses.lm <- lm(migraine ~ drug * dose - (1|as.numeric(participant)), data=doses.full)
+```
+
+Apparently, you can't use factors as errors in `lm()` so I convert participant to a numeric vector first.
+
+You can `print()` or `summary()` the model object `doses.lm` to see what it consists of, and it might have information that you think is interesting.
+
+Now, we can put this through `Anova()`:
+
+```{r}
+Anova(doses.lm, type='III')
+```
+
+That is **not** the same output as before! Too bad... But the result is **qualitatively** the same, it may be OK to use it as input for `testInteractions()` from `phia` to investigate the interaction. Before doing anything else, we don't expect placebo to have any different effect depending on the dose, so it is unlikely to drive the interaction.
+
+```{r}
+testInteractions(doses.lm, fixed='drug', across='dose')
+```
+
+This gives us _simple main effects_: an F-test is run over the levels of dose, while keeping the levels of the other factors fixed. In this case this answers the question: is there an effect of dose if we only look at Placebo (or only at Drug A or Drug B). In this case the factor drug is fixed, so only Placebo or Drug A or Drug B is considered when testing across the various levels of dose.
+
+NB: If we'd done a three-way ANOVA, you could do _simple simple main effects_ by keeping two factors fixed, and comparing across a third, or you could do _simple interaction effects_ by kepping one factor fixed and comparing across the remaining two.
+
+The result above means that we can already provide somewhat of an explanation for the interaction in the ANOVA: there was no effect of dose for Placebo, but there is an effect of dose for Drug A and Drug B. If we want to investigate this further, we can compare specific doses of Drug A and Drug B (not Placebo). Since dose is an ordered factor, it makes sense to compare 25 mg with 100 mg and 100 with 200 mg, but once we've done that it might not make sense to compare 25 mg with 200 mg. Here, we'll use `testInteractions()` to do exactly those pairwise comparisons:
+
+```{r}
+DoseContrasts <- cbind('mg25_100'=c(1,-1,0), 'mg100_200'=c(0,1,-1))
+DrugsToCheck <- cbind('DrugA'=c(0,1,0),'DrugB'=c(0,0,1))
+testInteractions(doses.lm, custom=list(dose=DoseContrasts, drug=DrugsToCheck))
+
+# this gives the same contrasts, and many more, so we loose some power:
+#testInteractions(doses.lm, pairwise='dose', fixed='drug')
+```
+
+This gives us a list of F-tests based on the Anova table's sums of squares. Pretty neat!
+
+The comparisons here look _qualitatively_ the same as the three pairwise t-tests that we did first. But it is done in a single analysis where we can correct for multiple comparisons at once. However, one could argue that each of the three pairwise t-tests asks a different question, so that correcting for multiple comparisons should be done separately within each of those sets of three t-tests.
+
+Similarly, we can compare each drug with Placebo, keeping the dose constant.
+
+Here I also use the 'adjustment' argument to use a different correction for multiple comparisons.
+
+```{r}
+PlaceboContrasts <- cbind(c(1,-1,0),c(1,0,-1))
+colnames(PlaceboContrasts) <- c('Placebo-DrugA','Placebo-DrugB')
+PlaceboVsDrugs <- list(drug=PlaceboContrasts)
+testInteractions(doses.lm, custom=PlaceboVsDrugs, fixed='dose', adjustment='fdr')
+```
+
+So again, Drug A is better than Placebo at 200 mg and Drug B is better than Placebo at 25 mg (it is worse than Placebo at 200 mg).
+
+This is pretty useful and perfectly acceptable, especially since by default it use corrections for multiple comparisons (using the holm method). However, I'd expected both `Anova()` and `testInteractions()` to account for the repeated-measures approach, but the reuslts are exactly the same if I remove the `- (1|participant)` from the formula in the call to `lm()`, and it doesn't seem to accept input from `ezANOVA()`.
+
+### AFEX
+
+The package `afex` doesn't implement any new way to investigate interactions in an ANOVA, but it does play nice with `lsmeans`, making it possible to look at interactions after doing repeated-measures ANOVAs properly.
+
+Install and load it:
+
+```{r}
+#install.packages('afex')
+library(afex)
+```
+
+First we need to do the ANOVA again. In `afex` we have 3 functions that run an ANOVA. They should all give the same output, but they take input in different forms; it lets you provide input like you would to `Anova()`, `lme4` and `ezANOVA()`. Since we already know that last one, we'll use that. It also gives us a function `nice()` that prints a human-friendly ANOVA table, that we'll try right away.
+
+```{r}
+fit_doses <- aov_ez("participant","migraine",doses.full,within=c("drug","dose"))
+nice(fit_doses)
+```
+
+Nice indeed! This gives the same F and p-values, and it tells us they are corrected for non-sphericity using Greenhouse-Geisser. Now we can use `lsmeans()`.
+
+```{r}
+library(lsmeans)
+cellmeans <- lsmeans(fit_doses,specs=c('dose','drug'))
+cat('\n')
+summary(cellmeans)
+```
+
+We can use this table to run all sorts of contrasts:
+
+```{r}
+# we're interested in the effect of dose of the actual treatments
+# but let's check placebo as well
+PL_25vs100 <- c(1, -1, 0, 0, 0, 0, 0, 0, 0)
+PL_25vs200 <- c(1, 0, -1, 0, 0, 0, 0, 0, 0)
+PL_100vs200 <- c(0, 1, -1, 0, 0, 0, 0, 0, 0)
+
+# here are the actual treatments:
+A_25vs100 <- c(0, 0, 0, 1, -1, 0, 0, 0, 0)
+A_25vs200 <- c(0, 0, 0, 1, 0, -1, 0, 0, 0)
+A_100vs200 <- c(0, 0, 0, 0, 1, -1, 0, 0, 0)
+B_25vs100 <- c(0, 0, 0, 0, 0, 0, 1, -1, 0)
+B_25vs200 <- c(0, 0, 0, 0, 0, 0, 1, 0, -1)
+B_100vs200 <- c(0, 0, 0, 0, 0, 0, 0, 1, -1)
+
+# contrasts for each of the real pills versus placebo given a dose:
+PLvsA_25 <- c(1, 0, 0, -1, 0, 0, 0, 0, 0)
+PLvsB_25 <- c(1, 0, 0, 0, 0, 0, -1, 0, 0)
+PLvsA_100 <- c(0, 1, 0, 0, -1, 0, 0, 0, 0)
+PLvsB_100 <- c(0, 1, 0, 0, 0, 0, 0, -1, 0)
+PLvsA_200 <- c(0, 0, 1, 0, 0, -1, 0, 0, 0)
+PLvsB_200 <- c(0, 0, 1, 0, 0, 0, 0, 0, -1)
+
+# contrasts for both drugs given a dose:
+AvsB_25  <- c(0, 0, 0, 1, 0, 0, -1, 0, 0)
+AvsB_100  <- c(0, 0, 0, 0, 1, 0, 0, -1, 0)
+AvsB_200  <- c(0, 0, 0, 0, 0, 1, 0, 0, -1)
+
+# we wanted to do this contrast previously:
+A_200vsB_25 <- c(0, 0, 0, 0, 0, 1, -1, 0, 0)
+
+contrasts_4_doses <- list(PL25vs100=PL_25vs100, PL25vs200=PL_25vs200, PL100vs200=PL_100vs200, 
+                          A25vs100=A_25vs100, A25vs200=A_25vs200, A100vs200=A_100vs200,
+                          B25vs100=B_25vs100, B25vs200=B_25vs200, B100vs200=B_100vs200,
+                          PLvsA25=PLvsA_25, PLvsB25=PLvsB_25,
+                          PLvsA100=PLvsA_100, PLvsB100=PLvsB_100,
+                          PLvsA200=PLvsA_200, PLvsB200=PLvsB_200,
+                          AvsB25=AvsB_25, AvsB100=AvsB_100, AvsB200=AvsB_200,
+                          A200vsB25=A_200vsB_25)
+contrast(cellmeans, contrasts_4_doses, adjust='Tukey')
+```
+
+Those are 19 comparisons all done in one go. When running the `contrast()` function with this type of least-square means output (not with ~drug|dose, but with specs=...) you need to specify the method to correct for multiple comparisons. It seems you can use most of the options in `p.adjust()` as well as "Tukey" and "Scheffe". For some reason it changed to "Sidak" here, so that's another option.
+
+Using this method and controlling for 19 comparisons using Sidak (which is only slightly less conservative than Bonferroni) some effects disappear. Drug A is not better at 100 mg as compared to 25 mg. But also at 25 mg, Drug B is no longer better than placebo. This means that we could have skipped the very last comparison (Drug B at 25 mg versus Drug A at 200 mg), as we would no longer recommend Drug B in _any_ case.
+
+The only treatment that is consistently better than placebo or the other drugs is now: Drug A at 200 mg.
+
+### Manual simple main effects
+
+In order to use this, we need the sum of squares and degrees of freedom for the _residuals_ of the interaction. None of the previous repeated-measures ANOVAs mention this, because every term now has it's own line for residuals. However, we can get it from the `aov` object from the ezANOVA:
+
+```{r}
+summary(full.dose.model$aov)
+```
+
+We store this in a variable:
+
+```{r}
+MSresid <- 132.1
+DFresid <- 196
+```
+
+We now look at the three one-way ANOVAs we can do for each of the drugs, using only dose as a within-subject factor. We want the denominator sum of squares, so we tell `ezANOVA()` to give detailed output:
+
+```{r}
+for (testdrug in c('Placebo', 'DrugA', 'DrugB')) {
+  print(ezANOVA(data=subset(doses.full,drug==testdrug), dv=migraine, wid=participant, within=dose, type=3, detailed=TRUE)[1])
+}
+```
+
+For this example we'll ignore sphericity checks.
+
+```{r}
+Fvalues <- c('Placebo'=172.0133, 'DrugA'=2074.72, 'DrugB'=4644.04) / MSresid
+(Fvalues)
+```
+
+Then we can use the `pf()` function which gives probabilities of an F-value given the degrees of freedom. The first df comes from the effect in the one-way ANOVAs which is always 2. The second df comes from the original ANOVA's residuals, and is 196.
+
+```{r}
+pvalues <- 1-pf(Fvalues,2,DFresid)
+(pvalues)
+```
+
+This does not match the output from `testInteraction()` exactly, but gives the same pattern: there is an effect of dose for Drug A and Drug B, but not for Placebo.
+
+# Exercise C
+
+As a bonus, we can do a mixed-design ANOVA: some within-subject and some between-subject factors. This is relatively easy to do in R (unlike simple main effects on the result), but I'm including an example here anyway.
+
+Let's get the partial data:
+
+```{r}
+migraine.split <- subset(doses.full, dose==200)
+migraine.split$dose <- NULL
+migraine.split$group <- factor(migraine.split$group)
+```
+
+We're now going to consider 'group' as factor, and you can use your imagine to decide what that is: two clinics, genders, seasons, or anything you can think of.
+
+First a plot:
+
+```{r}
+library(phia)
+plot(interactionMeans(lm(migraine ~ drug * group, data=migraine.split), factors=c('group', 'drug'), atx='drug'))
+```
+
+This looks very similar to what we had before, except that Placebo seems to do very well with a dose of 100 mg.
+
+So this would be a mixed ANOVA: one within subject factors and one between subject factors:
+
+```{r}
+library(ez)
+shortAOV <- ezANOVA(data=migraine.split, dv=migraine, wid=participant, within=drug, between=group, type=3, return_aov=TRUE)
+print(shortAOV[1:3])
+```
+
+There are main effects of group and drug here, but there is also an interaction, so those main effects would be hard to interpret. Since we want to investigate that interaction, we'll redo the ANOVA using `afex`:
+
+```{r}
+fit_migraine_split <- aov_ez("participant","migraine",migraine.split,within="drug",between="group")
+nice(fit_migraine_split)
+```
+
+This table again looks like it has the same results as ezANOVA. Let's immediately do the follow ups using `lsmeans`. There are six cells now, and first I need to know which cells are where, so we can define some contrasts:
+
+```{r}
+cellmeans_split <- lsmeans(fit_migraine_split,specs=c('group','drug'))
+print(cellmeans_split)
+```
+
+```{r}
+# check difference between the two groups for each drug:
+PL_1vs2    <- c(1, -1, 0, 0, 0, 0)
+A_1vs2     <- c(0, 0, 1, -1, 0, 0)
+B_1vs2     <- c(0, 0, 0, 0, 1, -1)
+
+# check difference with placebo for each group:
+PLvsA_1    <- c(1, 0, -1, 0, 0, 0)
+PLvsA_2    <- c(0, 1, 0, -1, 0, 0)
+PLvsB_1    <- c(1, 0, 0, 0, -1, 0)
+PLvsB_2    <- c(0, 1, 0, 0, 0, -1)
+
+contrasts_groups_drugs <- list(
+  PL1vs2=PL_1vs2,
+  A1vs2=A_1vs2,
+  B1vs2=B_1vs2,
+  PLvsA1=PLvsA_1,
+  PLvsA2=PLvsA_2,
+  PLvsB1=PLvsB_1,
+  PLvsB2=PLvsB_2
+)
+contrast(cellmeans_split, contrasts_groups_drugs, adjust='Tukey')
+```
+
+The first three comparisons tell us the effect of Placebo and Drug A are not different for the two groups, but the effect of Drug B is; group 2 does worse with Drug B as compared to group 1. However, for group 1, Drug A does better than Placebo but there is no difference between Drug B and Placebo. For group 2, Drug A doesn't seem to help, while it is Drug B that is worse than Placebo.

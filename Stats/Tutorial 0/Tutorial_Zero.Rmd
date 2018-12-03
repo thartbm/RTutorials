@@ -1,0 +1,62 @@
+---
+title: "Tutorial Zero"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+# Installing R
+
+## Windows
+
+1. Download [R 3.4.1](https://cloud.r-project.org/bin/windows/base/)
+2. Run the installer you just downloaded. Usually the defaulty options are good. Change if you know what you're doing.
+3. Get [Rtools](https://cloud.r-project.org/bin/windows/Rtools/) in order to build/install packages.
+
+## Mac OS X
+
+1. Download [R 3.4.1](https://cloud.r-project.org/bin/macosx/)
+2. Make sure you have an X11 server, and you probably want to have Clang and GNU Fortran to compile packages when installing them - see details on the link above.
+3. Install your pkg file(s).
+
+## Linux
+
+Most Linux distributions come with R in their repositories. Install from there if possible.
+
+Here is some [information on installing for Linux](https://cloud.r-project.org/bin/linux/).
+
+# Installing R Studio
+
+R Studio is an integrated development environment to make working in R easier and faster. I'll be using it during the tutorials and I recommend using it too.
+
+1. Download [R Studio Desktop](https://www.rstudio.com/products/rstudio/download/)
+2. Select FREE and pick the version you need from the list to download.
+3. Run the installer.
+4. Start R Studio.
+
+# R Studio interface
+
+![Screenshot of R Studio running on my laptop](RStudio.png)
+
+There is a lot to see here, take some time to inspect some of it. The screen is divided into 4 panels or panes:
+
+- **Console** (left or bottom left): This is the command line interface to R. If you are not using R Studio, you will at least have the Console. All commands can be entered here, so you can test how to run any command here.
+- **Source** (top left): This pane might not be open when first starting R, so don't worry if you don see it. It is a text editor to write scripts. It can have multiple tabs, in the example there is only one, an empty, unsaved file. Notice the 'Run' button that allows you to run part of a script in the Console.
+- **Environment**/**History** (top right): In the Environment tab you can see all the datasets, variables and functions that you loaded or defined. The History tab has a list of all the previous commands you entered in the Console. Notice the 'Import Dataset' button that can be used to load data from several sources. You can open a data frame for inspection from the Environment tab, which actually opens a tab in the Source console.
+- **Files**/**Plots**/**Packages**/**Help**/**Viewer** (bottom right): There are several utilities here. The three you will probably use most are: Files, which allows you to look at files and set the working directory (important when working with files, such as the data files for the tutorials); Plots, which has the figures you made of your data, and Help to look up how R packages and function work. We might also install one or two packages in the Packages tab.
+
+# R Introduction
+
+R is both a way to do statistics and a scripting language. Here we'll focus on the statistics, but it may help to get more comfortable with R the scripting language.
+
+If you want to get an overview of basics in R, I can recommend the book: "R In A Nutshell," 2^nd^ edition by Joseph Adler. Google this: `pdf r in a nutshell 2nd edition`. Chapter 3 is especially useful for people who have never written any code yet, but Chapters 1-5 are useful for everyone to at least leaf through and then more carefully read the sections that are relevant to you. The rest of the book is a great reference for all your future R work.
+
+Alternatively, you could take the free 'Introduction to R' course on [DataCamp](http://www.datacamp.com). This has you _interactively_ type R commands to complete a set of excercises that introduce you to the basics in R. I just did it the other day and learned some new things myself.
+
+## R Notebooks
+
+I will try to create R Notebooks with the necessary R code to do the tutorials. You can view them as HTML files, but you can also open them in R Studio where you can interactively play with the embedded code.
+
+## R Scripts
+
+You won't need to know how to write notebooks though, you can use R in whatever way you prefer: Console only or with scripts (or with notebooks if you really want). I'd recommend getting used to scripts as they allow you to re-run and refine your analyses without having to retype many commands.

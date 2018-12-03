@@ -1,0 +1,187 @@
+---
+title: 'Tutorial Five: One-Way, Repeated Measures ANOVA'
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='')
+#setwd("~/Desktop/R tutorials/2017/Tutorial 5")
+#setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+```
+
+_Dr. Blue would like to examine the effect of drug type (no drugs, placebo, drug A, drug B) on the incidence of migraines. He recruited a sample of patients classified as having frequent migraines. Each patient was asked to take 50 mg of each type of drug for a two month period of time and document the frequency and severity of their migraines using a migraine assessment scale. A one month break in which patients refrained from taking any medication was included in between each two month session. The order of drug exposure was counterbalanced._
+
+Let's load the data and look at it:
+
+```{r}
+load('Tutorial_5_Migraine.rda')
+str(Migraine)
+```
+
+The data is in wide format, and no factors have been set yet. Let's first convert the data to long format. We'll use the base `reshape()` function. We need a column defining participant ID:
+
+```{r}
+Migraine$participant <- factor(c(1:50))
+# reshape needs funky column names in the form: 
+# characters.number, for columns that need to be merged::
+colnames(Migraine) <- c('drug.1', 
+                        'drug.2', 
+                        'drug.3', 
+                        'drug.4', 
+                        'participant')
+Migraine <- reshape(Migraine, 
+                    direction="long", 
+                    varying=c('drug.1', 'drug.2', 'drug.3', 'drug.4'), 
+                    timevar='drug', 
+                    v.names='migraines', 
+                    times=c('NoDrug', 'Placebo', 'DrugA', 'DrugB'))
+```
+
+For this dataset, we could have done it by hand fairly easily, but for larger and more complicated datasets, it doesn't hurt to know that there is a `reshape()` function. If you need even more powerfull functionality, there is the `reshape2` package and some others. Now, I still want to clean up the results a bit.
+
+```{r}
+# it has an extra column 'id' that I don't want:
+Migraine$id <- NULL
+# it has weird rownames:
+rownames(Migraine) <- NULL
+# and there are some 'attributes' assigned:
+attr(Migraine, c('reshapeLong')) <- NULL
+# finally, the 'drug' column should be a factor:
+Migraine$drug <- factor(Migraine$drug, 
+                        levels=c('NoDrug', 'Placebo', 'DrugA', 'DrugB'))
+# now it looks the way we want it:
+str(Migraine)
+```
+
+# Exercise A:
+
+_Before conducting your analysis, would you expect the type of drug taken by the patient to have an effect on migraine severity/frequency (as measured by the scale used)? Where do you expect differences (Hint: consider where you would check for differences in post hoc comparisons)?_
+
+Let's do some simple plots:
+
+```{r}
+boxplot(migraines ~ drug, data=Migraine)
+```
+
+And means with confidence intervals:
+
+```{r}
+library(gplots)
+plotmeans(migraines ~ drug, data=Migraine,ylim=c(15,45))
+```
+
+From both plots it appears that taking anything helps reduce migraines, and that Drug B is the best treatment. Whether or not this is significant remains to be seen. There might be an effect of placebo against no drug, but we are primarily interested in testing if the drugs themselves are effective, with both the no drug and placebo serving as control conditions.
+
+# Exercise B
+
+_Does the type of drug taken by the patient affect migraine severity?_
+
+To answer this, we'll use `ezANOVA()` to do a one-way, repeated measures ANOVA on a model predicting _migraines_, using the within subjects factor _drugs_ (no drugs, placebo, drug A, drug B).
+
+```{r}
+library(ez)
+migraineAOV <- ezANOVA(data=Migraine, dv=migraines, wid=participant, within=drug, return_aov=TRUE, type=3)
+print(migraineAOV)
+```
+
+You can see that the output starts with term 2, apparently skipping term 1. It then spits out sphericity tests and corrections for non-sphericity. Finally it prints some output from the aov object we asked for.
+
+# Exercise C
+
+_Compare the no drug treatment to all drug treatments combined and both drug A and drug B treatment to placebo._
+
+Now we need to do 'contrasts', but how do we do that? This does not seem possible with the ezANOVA function, but since this is a one-way ANOVA, we could also run it using `aov()`, since the type of sums of squares doesn't matter for a one-way ANOVA. However, we do need to use participant so that this becomes a repeated measures ANOVA. Since `aov()` uses Type I sums of squares and we can specify that we only want main effects, we can first take out the variance explained by participants and then look at the effect of drugs:
+
+```{r}
+summary(aov(migraines ~ participant + drug, data=Migraine))
+```
+
+As you can see there is no interaction term in the model, and the stats for the effect of drugs are the same as in the `ezANOVA()` results. Phew! If you run it without the `participant` factor in the model, the stats are different (try it!), so we do need it.
+
+There is one way to tell R to do contrasts in this function. You first need to specify the contrasts in the factor of the data frame and then tell `aov()` to list splits for a given factor. Let's specify the contrasts before running the function again:
+
+```{r}
+# define three contrasts, one for any drug versus nothing
+ND.BD <- c(-1,1/3,1/3,1/3)
+# and one for each actual drug versus placebo
+PL.A   <- c(0,-1,1,0)
+PL.B   <- c(0,-1,0,1)
+# combine into matrix:
+my.contrasts <- cbind(ND.BD, PL.A, PL.B)
+
+# these contrasts have to be applied to the factor 'drug':
+contrasts(Migraine$drug) <- my.contrasts
+
+# then redo the ANOVA:
+migraineAOVcontrasts <- aov(migraines ~ participant + drug, data=Migraine)
+
+# which should give the same result:
+summary.aov(migraineAOVcontrasts)
+```
+
+This still looks exactly the same - as it should. Now we want to see the contrasts, wich we can only get by using the function `summary.aov()` and by specifying the splits argument, which takes a specific from. The numbers are the columns in the matrix of contrasts, but the names can be given here as you like it, they'll just be copied to the output:
+
+```{r}
+summary.aov(migraineAOVcontrasts, 
+            split=list(drug=list(
+              "No Drugs vs. Any Pill"=1, 
+              "Drug A vs. Placebo"=2, 
+              "Drug B vs. Placebo"=3)))
+```
+
+So taking any pill helps as compared to no drugs and no pill. In the Placebo condition, people still take a pill, but it doesn't contain any drugs. We see no difference between taking Placebo or Drug A, but Drug B is better than Placebo.
+
+However, since this is `aov()` which uses Type I sums of squares, effects tested later depend on the strength of previously tested effects. For example, if you change the first contrast to be only the two drugs versus no drugs, then there is a significant difference between Drug A and Placebo, which would mean that Drug A is actually worse than Placebo!
+
+## Contrasts
+
+There is a limitation to the number of contrasts that can be specified this way. A standard set of contrasts, assumes that the first level of the factor drug is the reference level of the factor (in this case 'NoDrug') and then it compares each of the other levels with this reference level:
+
+1. NoDrug vs. Placebo
+2. NoDrug vs. DrugA
+3. NoDrug vs. DrugB
+
+This would give this contrast matrix (check the one we used above):
+
+```
+           C1  C2  C3
+NoDrug     -1  -1  -1
+Placebo     1   0   0
+DrugA       0   1   0
+DrugB       0   0   1
+```
+
+By specifying it ourselves, we override this standard, but for some reason, there are still only three contrasts allowed. This number depends on the levels of the factor you want to do contrasts in.
+
+It is possible to do contrasts for factors involved in interactions, or even within those interactions. However, the contrast matrices become really complicated, and since `aov()` has limitations due to it's Type I sums of squares, this is pretty complicated.
+
+# Exercise D
+
+_Complete all simple comparisons among treatments._
+
+We can't apply more than 3 contrasts to the drug factor. An option could be to run two more ANOVAs with the missing 4 contrasts (there are 6 possible comparisons between single treatments, 2 of which were in our original contrasts). However, then you'd have to correct for multiple comparisons in some complicated way, so that is not a great route to take. We might simply use TukeyHSD for this or do pairwise t-tests with the appropriate correction for multiple comparisons. For now, we' ll pick Tukey's HSD, but we don't want to compare all participants with each other (the first "factor" is participant). So we specifiy that we only want the second term in the model, which is the main effect of the factor drug:
+
+```{r}
+TukeyHSD(migraineAOVcontrasts, which=2)
+```
+
+The only comparison that is not significant is the one between Drug A and Placebo. In other words, treatment with Drug A is not different from treatment with Placebo. It would seem we can't rule out that the reduction in migraines when taking Drug A is solely due to the placebo effect.
+
+Do we need to do any other "simple comparisons"?
+
+# Exercise E
+
+_What are your conclusions?_
+
+We can use the partial eta squared from the ezANOVA results, and potentially Greenhouse-Geisser corrections for violations of sphericity applied to the F statistic and p value (none here). For the contrasts, we don't really have this information, and we probably don't want to calculate it from the aov object's sums of squares. For this report, we could simply leave them out of the reported statistics for the contrasts.
+
+Our conclusions could be:
+
+To see if two drugs or a placebo help reduce migraines, 50 participants all did each of 4 treatments: no drug, placebo, drug A and drug B. Each treatment was done for 2 months, with a 1 month period without treatment in between. The order of treatments was counterbalanced across participants. During the treatment period, the number and severity of migraines was assessed through a scale.
+
+Figure 1 (e.g. the box-and-whisker plot - don't show both) shows the scores on the migraine scale depending on treatment, and it seems there is an effect of any treatment over no drugs, and that drug B is the best treatment. To test if the treatments had different effects, we ran a one-way, repeated measures ANOVA on a model predicting migraines, using the factor _drug_ (No Drugs, Placebo, Drug A, Drug B). There was indeed an effect of _drug_ (F(3,147)=15.6, p<.001, $\eta_p^2$=0.192). Contrasts showed that taking any pill (Placebo, Drug A and Drug B combined) reduced migraines more than the No Drug condition (F(1,147)=31.8, p<.001). Drug B reduced migraines more than placebo (F(1,147)=14.489, p<.001) but Drug A did not (F(1,147)=0.534, p=.466). A post-hoc Tukey HSD confirmed that there were differences between the effectiveness of all pairs of treatments, except between Drug A and Placebo.
+
+To reduce migraines, first a treatment with a placebo might be tried. This lowers migraines, but has no side-effects. If migraines remain problematic or if they are severe to begin with, Drug B seems a good alternative. The present study suggest that Drug A should not be used as it will have side-effects but does not reduce migraines more than a placebo does.

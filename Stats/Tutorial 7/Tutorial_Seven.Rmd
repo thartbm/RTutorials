@@ -1,0 +1,290 @@
+---
+title: 'Tutorial 7: Correlation, Regression and Multiple Regression'
+output:
+  html_notebook: default
+  pdf_document: default
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='')
+#setwd("~/Desktop/R tutorials/2017/Tutorial 7")
+```
+
+_York's Centre for Student Success tries to promote health with the philosophy this will help academic achievement as well. Dr. Steah Late works for the Centre and is interested in Body Mass Index (BMI). In the literature, physical activity, impulse control, percentage of carbohydrates in diet and sleep quality are described as potential predictors of BMI. She collects data on BMI and those four predictor variables from 72 students._
+
+- BMI = body mass divided by the square of the body height: kg/m2 (very high values indicate obesity, but it shouldn't be too low either)
+- physact = 6 point scale, higher is more activity
+- impulsectrl = a scale from 0 to 120, with higher values meaning people are less impulsive
+- carbpercent = a percentage: 0-100, with higher values meaning more carbs
+- sleepquality = a scale that actually indicates sleep problems: lower values mean better sleep
+
+Let's first load the data:
+
+```{r}
+load('Tutorial_7_BMI.rda')
+str(BMIpred)
+```
+
+Since we don't need any factors, we can leave the data as is. In order to make our life a little easier, we'll `attach()` the data frame to the R session. This means we don't need to use the $ notation to indicate variables.
+
+```{r}
+attach(BMIpred)
+```
+
+We should check the data for normality and such, but I'll skip that as you already know how and it is not that crucial for regression anyway.
+
+# Correlation
+
+_What kind of relationship would you expect between BMI and physical activity or between BMI and sleep quality?_
+
+With more physical activity BMI should go down. With better sleep BMI might go down as well. Let's plot the data:
+
+```{r}
+par(mfrow=c(1,2))
+plot(physact,BMI)
+plot(sleepquality,BMI)
+```
+
+For physical activity this looks like expected, but it's not so clear for sleep quality.
+
+We can test it better by calculating the correlation between those two pairs of variables:
+
+```{r}
+cor(BMI, physact)
+cor(BMI, sleepquality)
+```
+
+The sign of the correlation match our expectation for physical activity, but not for sleep quality. The correlation between sleep quality and BMI is also pretty low.
+
+To actually see if there are significant correlations, we can run `cor.test()`. By default this will use Pearson's rho, but it has two other options as well: Kendall's tau and Spearman's rho. Pearson's rho is perfectly fine for us.
+
+First for physical activity:
+
+```{r}
+cor.test(BMI, physact)
+```
+
+And also for sleep quality:
+
+```{r}
+cor.test(BMI, sleepquality)
+```
+
+This shows more or less the same picture again, but is the more thorough way to test correlations.
+
+Of course, [correlation does not imply causation](http://www.tylervigen.com/spurious-correlations).
+
+# Regression
+
+_Test if physical activity and sleep quality can predict BMI._
+
+This calls for regression. We can use the `lm()` function (for **l**inear **m**odel) to do regression. This function uses formula notation again. As we want BMI predicted by physical activity, we should write: `BMI ~ physact`. Since we attached the data frame, we don't have to specify the `data=` argument as the variables are already available:
+
+```{r}
+physact.lm <- lm(BMI ~ physact)
+summary(physact.lm)
+```
+
+That looks great! Let's do the same for sleep quality:
+
+```{r}
+sleepq.lm <- lm(BMI ~ sleepquality)
+summary(sleepq.lm)
+```
+
+That looks not so great. But let's plot the data again anyway, now with a regression line added. We use the `abline()` function for that which takes as the main argument the coefficients from a linear regression. It's called `abline` because it plots a line: `y ~ A + Bx`. It doesn't create it's own figure/graph/plot like `plot()` does, but rather draws the line in the previously created figure.
+
+```{r}
+par(mfrow=c(1,2))
+plot(physact,BMI)
+abline(physact.lm$coefficients, col='red')
+plot(sleepquality,BMI)
+abline(sleepq.lm$coefficients, col='red')
+```
+
+We reject sleep quality as a good predictor, but we want to follow up on the model of physical activity as predictor of BMI. First we'll look at the residual errors to see if there are any strange patterns in there:
+
+```{r}
+plot(physact, resid(physact.lm))
+abline(0,0)
+```
+
+That looks more or less OK. Let's also inspect Cook's D. Some people would use dfbeta in this case as it cares more about the whole fit (check `influence.measures()`), while Cook's D cares more about individual outliers. Still others use the Mahalanobis distance (check `mahalanobis()`).
+
+If you just want Cook's D in a vector, use `cooks.distance()`:
+
+```{r}
+phys.lm.CookD <- cooks.distance(physact.lm)
+options(scipen=999)
+cat(round(as.numeric(phys.lm.CookD), digits=5))
+```
+
+You could add this as a column to your data frame, but we want to use it to potentially remove strange observations from the data. As always it helps to visualize it, and there is a neat way to do that, but we need to define a cutoff level first. There are several ways to get a cutoff level for Cook's D, here I'm using `4 / (n - k - 2)` where n is the number of observations and k is the number of predictors.
+
+```{r}
+options(scipen=0)
+cutoff <- 4/((nrow(BMIpred)-length(physact.lm$coefficients)-2))
+plot(physact.lm, which=4, cook.levels=cutoff)
+```
+
+Three cases are marked. Case 56 seems in line with the rest of the data, but 70 and 71 might be a problem. We could rerun the model with those cases removed:
+
+```{r}
+BMIreduced <- BMIpred[-c(70,71),]
+physact.red.lm <- lm(BMI ~ physact, data=BMIreduced)
+summary(physact.red.lm)
+```
+
+The residual errors go down, but so do both the R-squared values. So perhaps the fit actually gets a little worse and these datapoints are informative of what is really going on. We decide to go back to the original full dataset.
+
+# Multiple Regression
+
+_How well can each of the independent variables predict BMI when keeping the other independent variables constant?_
+
+That sounds like multiple regression. There are (at least) two kinds of ways in which people will do multiple regression. We'll do the first one:
+
+In the first way to do multiple linear regression you want to study the relationships between the predictors and the dependent variables. Usually you have a given data set that will not expand, and you don't really want models with more than 10 predictors or so. Here multi-collinearity is problematic, but some outliers might be acceptable as long as the model still tells you about the relationship between the variables in your dataset.
+
+In the second way to do multiple linear regression you want to have a model that can predict the dependent variable on new cases where the score on the dependent variable is unknown. The predictor variables are not that interesting and it is OK to have models with hundreds of predictors as well as multi-collinearity. However, outliers might be more problematic as they decrease the accuracy of the predictions - although usually there would also be many observations, so that each sample (and outlier) doesn't have much influence. This is more of a machine learning approach and not a more classic statistical approach as we use it.
+
+Both are valid, but when looking at documentation on multiple linear regression, you should be aware of which purpose that documentation has in mind and what you want to use it for.
+
+First we want to look at the data. In this case, the package `psych` has a very useful function to plot the data:
+
+```{r}
+#install.packages('psych')
+library(psych)
+```
+
+This function is called `pairs.panels()` and it takes a data frame as input. We will put BMI as the last column in the data frame so that it is always on the Y axis of the scatter plots. We'll also tell the function to put linear fits in the scatter plots (and not LOESS fitted curves):
+
+```{r}
+pairs.panels(BMIpred[c(2,3,4,5,1)], lm=TRUE, stars=TRUE)
+```
+
+This looks promising: there are 3 preditors with a good correlation with BMI.
+
+Doing multiple regression uses the same `lm()` function:
+
+```{r}
+full.model <- lm(BMI ~ 
+                   physact + 
+                   impulsectrl + 
+                   carbpercent + 
+                   sleepquality)
+summary(full.model)
+```
+
+This matches what we had before: physical activity is highly predictive but sleep quality is not (judging by the t-statistics and p-values). Even though impulse control and carbs might not be as powerful as physical activity to predict BMI, the model with four predictors has a higher R-squared, so the predictions do get better with more predictors.
+
+However, if we look at the correlation between impulse control and carbs, there might be some collinearity there. We'll test that with some functions from the `usdm` package.
+
+```{r}
+#install.packages('usdm')
+library(usdm)
+```
+
+First, we want to see the VIF scores, but only on predictors. That is why we index the columns in the dataframe with a vector that excludes the first column:
+
+```{r}
+vif(BMIpred[c(2,3,4,5)])
+```
+
+Those two highly correlated variables have a higher VIF score, but it doesn't seem to be in the problematic range. We can make sure:
+
+```{r}
+vifstep(BMIpred[c(2,3,4,5)])
+```
+
+No variable is flagged as suffering from collinearity problems, so we can simply continue. We could take the full model above, see that sleep quality doesn't contribute and just remove it. That is not wrong, but there are more sophisticated methods to determine which variables will be included in the final model, primarily step-wise regression. R has a function for step-wise regression that uses AIC (Akaike's **A**n **I**nformation **C**riterion) to evaluate how good the model is at each step (other packages might use the F-statistic). You can tell this function to start with a specific model, and drop or add predictor variables, or both. It will add or drop one predictor variable in each step, picking the action that yields the best results according to its model evaluation criterion. Once there is no more step available that might improve the model, it stops.
+
+```{r}
+stepwise.model <- step(lm(BMI ~ 
+                        physact +
+                        impulsectrl + 
+                        carbpercent +
+                        sleepquality),
+  direction='both')
+```
+
+There are only two steps: 1) it evaluates the full model, chooses to remove sleep quality and then 2) re-evaluates but doesn't make any further changes.
+
+We'd report F-statistics and R-squared from the final model that is the output of the function:
+
+```{r}
+summary(stepwise.model)
+```
+
+We should still check residuals, which are now plotted over the predicted values:
+
+```{r}
+plot(predict(stepwise.model),resid(stepwise.model))
+abline(0,0)
+```
+
+This looks pretty much like expected. We could check Cook's D like above, but there are no more big surprises in this dataset.
+
+Let's plot the predicted BMI over the actual value with a 95% confidence interval:
+
+```{r}
+# create a scatterplot with predicted BMI over actual BMI:
+plot(BMI, predict(stepwise.model),
+     main='BMI prediction model',
+     xlab='BMI', 
+     ylab='predicted BMI', 
+     xlim=c(19,30),ylim=c(19,30),axes=F)
+# the x and y scale are limited from 19 to 30
+# as those are the minimum and maximum values in the data
+# axes is set to false so no axes and ticks are drawn
+
+# we fit a line between the predictions of the model and the data
+# (a regression on a regression?)
+predictBMI <- lm(predict(stepwise.model) ~ BMI)
+# and use that to show a line:
+abline(predictBMI$coefficients, col='red')
+# we determine the confidence intervals at each integer number from 19 to 30
+# first upper then lower, drawn as dashed lines (linetype/lty = 2)
+lines(
+    x   = c(19:30),
+    y   = predict( predictBMI, 
+                   newdata=data.frame(BMI=c(19:30)), 
+                   interval = "confidence" )[ , "upr" ],
+    col = "red",
+    lty = 2)
+
+lines(
+    x   = c(19:30),
+    y   = predict( predictBMI, 
+                   newdata=data.frame(BMI=c(19:30)), 
+                   interval = "confidence" )[ , "lwr" ],
+    col = "red",
+    lty = 2)
+
+# this puts tick marks exactly where we want them:
+axis(side=1, at=c(20,23,26,29))
+axis(side=2, at=c(20,23,26,29))
+```
+
+That looks like a pretty good model! (And plot.)
+
+If we want to look at a model on "standardized" scores (mean=0, sd=1), we can make use of the `scale()` function. This can be applied to a data frame (and matrix or vector) but will always return a matrix. Luckily the column names are preserved, so we can immediately transform it back into a data frame like this: `data.frame(scale(BMIpred))`: 
+
+```{r}
+summary(lm(BMI ~  physact +
+             impulsectrl + 
+             carbpercent, 
+           data=data.frame(scale(BMIpred))))
+```
+
+The p-values, F-statistic and $R^2$ should be the same, but the advantage is that the magnitude of the estimated coefficients should now be comparable. The advantage of not standardizing the predictor variables is that coefficients are immediately meaningful.
+
+_What would Dr. Late advise York to do to promote student health?_
+
+A multiple linear regression was fitted that could predict _BMI_ based on _physical activity_, _impulse control_ and _percentage carbohydrates_ in diet (F(3,68)=43.48, p<.001, $R^2$=.642). Physical activity (t=-5.71, p<.001), impulse control (t=-3.38, p=.001) and carbohydrate percentage (t=2.23, p=.028) all contributed to the prediction of participant's BMI:
+
+```BMI ~ 24.95 - 0.577 * physact - 0.039 * impulsectrl + 0.070 * carbpercent```
+
+No predictors showed collinearity, but sleep quality was removed during step-wise regression using an AIC criterion as it didn't contribute to the model's predictions.
+
+If York would like to make sure that the students will score better on some of the three main predictors of BMI, physical activity seems to have the highest impact. York could make access to sports facilities easier or organize events to make students more aware of the benefits of exercise. Carb intake could be reduced by regulating the menu of food vendors on campus, but that might be hard to achieve in reality. Impulse control also has some effect, but would be close to impossible to improve. So if little to nothing is available to students to help them exercise more, maximum effects can be achieved by improving exercise. If exercise is already at a high level, perhaps something can be done to make students aware of the effects of dietary choices.

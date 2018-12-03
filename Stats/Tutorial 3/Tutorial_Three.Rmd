@@ -1,0 +1,340 @@
+---
+title: 'Tutorial Three: One-Way ANOVA'
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='')
+#setwd("~/Desktop/R tutorials/2017/Tutorial 3")
+```
+
+
+_Mr. Green completed a survey in three different communities (small, medium, and large) located in the GTA, asking residents to record the number of “environmentally friendly” behaviours they completed over the course of a month. Below are the recorded data._
+
+Small | Medium | Large
+----- | ------ | -----
+13 | 30 | 31
+37 | 40 | 17
+46 | 27 | 19
+42 | 26 | 35
+50 | 45 | 43
+36 | 19 | 24
+11 | 32 | 33
+42 | 42 | 40
+31 | 39 | 48
+31 | 34 | 16
+13 | 35 | 24
+29 | 32 | 39
+43 | 30 | 21
+18 | 43 | 26
+39 | 38 | 27
+10 | 38 | 13
+42 | 44 | 43
+42 | 42 | 25
+13 | 37 | 41
+12 | 39 | 34
+
+Why would there be a difference in recycling behavior between communities of different sizes? Do you think small or large communities recycle more?
+
+Above you see the table from the Word document. It has the three communities next to each other. This is called 'wide format', but R likes 'long format'. Sometimes, we have to convert data from one format to another. The data file we use is already in long format, so let's load that and have a look at it.
+
+```{r}
+load('Tutorial_3_Recycling.rda')
+```
+
+Using the Environment tab, you can see that instead of having a column for each separate community, we have all the recycling scores in a single column, and then also code the community in another column. This allows testing effects of one variable on another. In this case: how well does _community_ predict _recycling_ behaviour?
+
+Let's inspect the data frame:
+
+```{r}
+str(Recycle)
+```
+
+OK, but community should be a **factor**, and it is ordinal: medium communities are larger than small ones, and large communities are larger than both.
+
+```{r}
+Recycle$community <- factor(Recycle$community, levels=c(1,2,3), labels=c('Small','Medium','Large'), ordered=TRUE)
+str(Recycle)
+```
+
+
+The long format does make it a little harder to get the 6-number summary for each community separately. For those who know programming; we could use a for-loop, but R has functionality in place to do these sort of things. In this case, the `tapply()` function is our friend:
+
+```{r}
+tapply(Recycle$recycling, INDEX=Recycle$community, FUN=summary)
+```
+
+Look up `help(tapply)` to see why/how this works. Since there is only one factor, tapply can keep the labels we set. You can have tapply use a function on subsets of the data defined by levels of multiple factors. Then the second argument should be a list of factors, and in that case, tapply won't use labels anymore, but it will still give you the right summary tables.
+
+Making boxplots can be done with _formula notation_:
+
+```{r}
+boxplot(recycling ~ community, data=Recycle, xlab='community',ylab='recycling')
+```
+
+In this formula notation, there is usually one variable on the left-hand side of the tilde character (~) and one or more variables in various constellations on the right-hand side. The variables on the right-hand side are used to "predict" the variable on the left-hand side and would be _independent_ or _predictor_ variables. The constellations in which they appear dictate details about how the variables are used for prediction. For this tutorial, this is not so important, but it will appear later on. The variable on the left-hand side would be the _dependent_ variable. In this case, the _dependent_ variable is 'recycling', and we want to see if this can be _predicted_ by the _independent_ variable 'community' size.
+
+In many fields it is more common to plot means instead of medians, as means are used for many statistics. We'll use a plotting function from the `gplot` package, that you might need to install first:
+
+```{r}
+#install.packages('gplots')
+```
+
+Now we can use `plotmeans()`. Notice that it uses the same formula notation that `boxplot()` also accepts:
+
+```{r}
+library(gplots)
+plotmeans(recycling ~ community, data=Recycle,ylim=c(20,45))
+```
+
+Instead of the quartile-based information depicted by a boxplot, this shows the means, and a 95% confidence interval. It is another way to show how data is distributed. The 95% confidence intervals are also used in some statistics, and we have already seen them be reported by `t-test()`.
+
+In both figures, we see the communities on the X-axis, helpfully labeled, and recycling behaviour on the Y-axis. There are no outliers according to the boxplot. The other plotting functions we know, `qqnorm()` and `hist()`, don't allow the _formula notation_ introduced here. So if you want to use those, you'll have to split the data manually, e.g. using the logical indexing explained in the previous tutorial, and then make separate plots.
+
+Let's see how it is with equal variance, and use `leveneTest()` again:
+
+```{r}
+library(car)
+leveneTest(recycling ~ community, data=Recycle)
+```
+
+This indicates that variance is _not_ equal between the groups. Let's see what they are. We can use `tapply()` again:
+
+```{r}
+tapply(Recycle$recycling, Recycle$community, FUN=var)
+```
+
+As you might have already guessed from the boxplots and confidence intervals, it is the variance in the small community that is larger. It is about 3 to 4 times as large as the others. Whether or not this is very serious is a matter of opinion - to a degree. In this case it doesn't seem too bad, so we won't correct it, but feel free to disagree. Some people use a rule of thumb that the ratio between the smallest and largest variance shouldn't exceed 1:4.
+
+## Exercise A: one-way ANOVA
+
+_What is your general conclusion about recycling behaviours in these communities?_
+
+Apparently, we should check if there is a difference in recycling behavior between the communities. This could be done with a one-way ANOVA.
+
+But first: why would there be any difference in recycling behavior between people living in smaller or larger communities?
+
+The formula notation we used above can also be used for many models, and an ANOVA usually uses a linear model fit. To do a fairly simple ANOVA without bells and whistles, we can use the `aov()` function, where aov stands for **a**nalysis **o**f **v**ariance:
+
+```{r}
+help(aov)
+```
+
+Alright! We can use formula notation here, and we see that `aov()` uses `lm()` to fit a model so that makes sense. Let's try it:
+
+```{r}
+aov.recycl <- aov(recycling ~ community, data=Recycle)
+summary(aov.recycl)
+```
+
+What does this output mean?
+
+BTW, try running this without converting community to a factor. What happens? Why would that be?
+
+If the data was not normally distributed, we could have used a Kruskal-Wallis test, which is a non-parametric alternative for one-way ANOVA's. If we run that it basically says the same thing:
+
+```{r}
+kruskal.test(recycling ~ community, data=Recycle)
+```
+
+However, ANOVA's are more versatile, so we prefer them.
+
+## Exercise B: post-hoc / pairwise comparisons
+
+_Perform a post-hoc comparison on your model or data. What can you further conclude about the differences between the groups from each of these comparison procedures?_
+
+With the ANOVA result, we can conclude that at least one of the communities is not the same as the others. But which is/are different from the others? To figure this out, we can use "post-hoc tests" although they may be planned a-priori, despite the name. One of the most well-known is Tukey's HSD (HSD stands for: **H**onest **S**ignificant **D**ifferences). This test does t-tests between data from each cell (combination of factor levels) with a correction for multiple comparisons. On the help page, we can read that the test takes a fitted model object as input, usually from `aov()`. We conveniently stored that in `aov.recycl` just now, so let's try it:
+
+```{r}
+TukeyHSD(aov.recycl)
+```
+
+There is a list of three t-tests, comparing recycling behavior in three pairs of community sizes: medium-small, large-small and large-medium. The p-values are adjusted for multiple comparisons in order to reduce our chance of a Type I error: the alpha level of 0.05 works for a single test, but if we run multiple tests, we the chance of a false positive would be 5% in each of those tests, so that our overall chance of a Type I error, or false positive, has now greatly increased.
+
+There is another way to accomplish the same thing and that is to use the function `pairwise.t.test()` with a correction for multiple corrections applied. Let's see if we get the same result.
+
+```{r}
+pairwise.t.test(Recycle$recycling, Recycle$community, p.adjust.method = "bonferroni")
+```
+
+Here, the output is a table where each of the cells has the corrected p-value for aone comparison. The same comparison is significant, but the numbers are not exactly the same. The difference is in the way both tests correct for multiple comparisons.
+
+The advantage of `pairwise.t.test()` is that you can change the method used to adjust the p-values. The number of comparisons grows exponentially with the number of groups (and factors), and this will make the bonferroni correction too strict in some cases. I've been trained to use Benjamini & Hochberg's false discovery rate (FDR) for all pairwise comparisons - not just the ones with many comparisons, but there might be other standard practices in your lab or field. In this case, using FDR would change all comparisons to show a difference, which might be a bit too much.
+
+A disadvantage of `pairwise.t.test()` is that it is hard to work with multiple factors, where `TukeyHSD()` has no problem with that.
+
+The function `pairwise.t.test()` uses pooled SD by default. Given the variances in the groups, does that make sense? What happens if we explicitly set `pool.sd=FALSE` as argument in the function?
+
+If we're still worried about the unequal variances, we could do a Welch's F test, or a one-way ANOVA with equal variance not assumed. This can be done with `oneway.test()`:
+
+```{r}
+oneway.test(recycling ~ community, data=Recycle)
+```
+
+There is still an effect, however, it doesn't return an aov model object, so we can't use `TukeyHSD()` but we can do the pairwise t-tests, and then specify that it shouldn't use pooled standard deviation, but calculate it separately for each group:
+
+```{r}
+pairwise.t.test(Recycle$recycling, Recycle$community, p.adjust.method = "bonferroni", pool.sd=FALSE)
+```
+
+Even if we stick with the very strict bonferroni correction, the people in the large community may do more recycling than people from both the medium and small community. If you look at the boxplots, do you think this is true? Does the result make sense to you?
+
+If you look closely at the figure produced by `plotmeans()`, the confidence interval for recycling behavior shown by people living in a large community does not include the means of the two other community sizes. This matches the last result here. Why would it be different from the first `pairwise.t.test()` and the `TukeyHSD()`?
+
+## Effect Size
+
+Here we first look at effect sizes for terms in an ANOVA, but I will also show effect sizes for a t-test later on.
+
+### Effect Size in ANOVA's: $\omega^2$ and $\eta^2$
+
+In case you want to know the effect-size of all the terms in the model used for the ANOVA, there are several ways to go. Here I will show the package `sjstats`.
+
+We will first have to install `sjstats`:
+
+```{r}
+#install.packages('sjstats')
+```
+
+This might take a while as it depends on some other packages that need to be installed as well.
+
+```{r}
+library(sjstats)
+omega_sq(aov.recycl)
+eta_sq(aov.recycl)
+```
+
+In any one-way ANOVA there is only one term, in this case _"community"_, and it has an $\omega^2$ of 0.209 and an $\eta^2$ of 0.239. Of these two, $\omega^2$ is considered to be less biased, but most statistics packages provide $\eta^2$. I can image that what is considered standard may be different in different fields, so it's good to know how to get multiple estimates of effect size.
+
+The main problem is that for an ANOVA, it seems more appropriate to calculate _partial_ $\omega^2$, or $\omega_p^2$ for which I have not found a package, but I did find someone's own function to calculate it from an `aov` object:
+
+```{r}
+partialOmegas <- function(mod){
+    aovMod <- mod
+    if(!any(class(aovMod) %in% 'aov')) aovMod <- aov(mod)
+    sumAov     <- summary(aovMod)[[1]]
+    residRow   <- nrow(sumAov)
+    dfError    <- sumAov[residRow,1]
+    msError    <- sumAov[residRow,3]
+    nTotal     <- nrow(model.frame(aovMod))
+    dfEffects  <- sumAov[1:{residRow-1},1]
+    ssEffects  <- sumAov[1:{residRow-1},2]
+    msEffects  <- sumAov[1:{residRow-1},3]
+    partOmegas <- abs((dfEffects*(msEffects-msError)) /
+                  (ssEffects + (nTotal -dfEffects)*msError))
+    names(partOmegas) <- rownames(sumAov)[1:{residRow-1}]
+    partOmegas
+}
+```
+
+For one-way ANOVA's the $\omega_p^2$ should be the same as the $\omega^2$:
+
+```{r}
+partialOmegas(aov.recycl)
+```
+
+Here they are indeed the same. For both $\omega^2$ and $\eta^2$, we can use this table to see if the effect is small, medium or large:
+
+&nbsp; | small | medium | large
+ ----- | ----- | ----- | -----
+$\omega^2$ or $\eta^2$: | >.01  | >.06  | >.14
+Cohen's d: | >.2 | >.5 | >.8
+
+If you use other measures of effect size, there might be other cut-off levels. In this case, we found a large effect. What does the effect size add to our results if we'd report them in a paper?
+
+### Effect Size in t-tests: Cohen's _d_
+
+To calculate effect size for a t-test, the most common approach is to calculate Cohen's d, with 
+If you want to calculate Cohen's d, you can explore the package `effsize` or the package `lsr`. The latter goes with the book "Learning Statistics with R" by Daniel Navarro. You can get a pdf [online](http://www.compcogscisydney.com/learning-statistics-with-r.html).
+
+We'll use `cohen.d()` from the `effsize` package here as it allows to apply Hedges correction on Cohen's d.
+
+```{r}
+#install.packages('effsize')
+```
+
+We'll use the data with the male and female scores on the stats quiz from tutorial 1, in two vectors:
+
+```{r}
+males <- c(1, 2, 3, 4, 4, 5, 5, 2, 3, 6, 7, 1, 5, 5, 3, 5, 4, 5, 8)
+females <- c(10, 9, 8, 11, 7, 12, 13, 13, 9, 11, 9, 10, 14, 12, 7, 10, 15, 8, 8, 9, 6)
+```
+
+Remember that there was a significant difference between the two:
+
+```{r}
+t.test(males, females)
+```
+
+Now, how large is this effect?
+
+```{r}
+library(effsize)
+cohen.d(males, females)
+```
+
+We can see that the estimate for Cohen's d is -2.71 and the function helpfully tells us that is a large effect size. The value is negative because the males have lower scores than the females. If we'd put the two vectors in the inverse order, Cohen's d would be positive, but otherwise the same.
+
+This function can also take formula notation, you can tell it to use pooled standard deviation, change your alpha or confidence level, and we can apply Hedges correction:
+
+```{r}
+cohen.d(females, males, hedges.correction=TRUE)
+```
+
+In this case that doesn't seem to matter too much. What does Cohen's d add to our results?
+
+## Power
+
+The main reasons to do power analyses are to:
+
+1. estimate how many samples you should collect in your experiment, and
+2. show that for a given dataset you'd have had enough power to detect an effect of a given size
+
+We'll look at the first reason only, and do so for t-tests and one-way ANOVAs.
+
+There is a package in R that can calculate power for a handful of standard statistical tests. It is called `pwr`, so we'll install it:
+
+```{r}
+#install.packages('pwr')
+```
+
+It can do power calculations for:
+
+- t-test
+- one-way ANOVA
+- correlation
+- chi-squared test
+- ...
+
+... and some more.
+
+### Power in t-tests
+
+Let's first try out a power calculation for a t-test: `pwr.t.test()`. There are four parameters that you could provide it, and you can leave out one which the test will then estimate. In our case, we're interested in testing how many people we'd need to test. This specific function does power calculations for t-tests with a single sample, or with two equally large samples, but there is an alternative for unequal sample sizes.
+
+We're going to use the male and female scores on the stats quiz, and see how many people we'd need to measure to get a significant effect. The effect size was 2.655927.
+
+```{r}
+library(pwr)
+pwr.t.test(n=NULL, d=2.6, sig.level=.05, power=.80, alternative='g')
+```
+
+Now we'll round up the n, and this tells us that we should get the quiz scores from three males and three females in order to get a significant difference. That's a very small sample size, and this is because our effect was very large. Let's see what happens if we'd decrease the effect size, to a small effect size according to Cohen's d:
+
+```{r}
+pwr.t.test(n=NULL, d=.3, sig.level=.05, power=.80, alternative='g')
+```
+
+Now, we'd need about 140 females as well as 140 males to get significant results.
+
+### Power in one-way ANOVAs
+
+The `pwr.anova.test()` function uses the same idea: it will estimate the one variable that you didn't specify. Let's run it with the effect size we got for recycling depending on community size, where we got an $/omega^2$ of .209:
+
+```{r}
+pwr.anova.test(k=3, n=NULL, f=.209, sig.level=.05, power=.80)
+```
+
+This tells us that we should've had 75 observations in each group, whereas we only had 60 in total, that is 20 observations in each group. That means that we got lucky this time, but we'd better measure more people for any follow-up.

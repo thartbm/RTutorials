@@ -1,0 +1,254 @@
+---
+title: 'Tutorial Four: Two-Way ANOVA'
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='')
+#setwd("~/Desktop/R tutorials/2017/Tutorial 4")
+```
+
+_Mary is interested in how sex and diet affect the growth of rats over their first month of life. She obtains a sample of 102 baby rats at birth and randomly assigns them to one of four diet groups: high calorie-low protein, high calorie-high protein, low calorie-low protein and low calorie-high protein. The baby rats are fed their specified diet for one month, following which Mary re-weighs each baby rat._
+
+```{r}
+load('Tutorial_4_RatGrowth.rda')
+str(RatGrowth)
+```
+
+There are two independent variables, that are already factors: gender and foodtype, and one dependent variable: growth, as measured by an increase in weight. See tutorial 3 for how to make factors.
+
+The factor Sex has these 2 levels:
+
+1. male
+2. female
+
+The factor Foodtype has these 4 levels:
+
+1. high calorie, low protein
+2. high calorie, high protein
+3. low calorie,  low protein
+4. low calorie,  high protein
+
+What do you think of the coding of the factors here?
+
+I will re-label the levels of the foodtype factor, so that we can see all the labels in a boxplot.
+
+```{r}
+RatGrowth$foodtype <- factor(as.numeric(RatGrowth$foodtype), 
+                             levels=c(1,2,3,4), 
+                             labels=c('hc-lp', 'hc-hp', 'lc-lp', 'lc-hp'))
+boxplot(growth ~ sex + foodtype, data=RatGrowth)
+```
+
+These boxplots are starting to look quite complicated. Here is another function to plot means, for a two-factor design:
+
+```{r}
+interaction.plot(RatGrowth$foodtype, RatGrowth$sex, RatGrowth$growth)
+```
+The downside is that it doesn't give any depiction of spread, like standard deviation, inter-quartile range or a 95% confidence interval.
+
+```{r}
+plot(-1000,-1000,
+     main='Rat Growth', xlab='foodtype',ylab='growth [g]', 
+     xlim=c(0.6,4.4), ylim=c(20,180), xaxt='n')
+# we want to plot one line for each gender:
+for (gender in c(1,2)) {
+  # take out only the data for this gender:
+  subset <- RatGrowth[which(RatGrowth$sex == c('female','male')[gender]),]
+  avgs <- tapply(subset$growth, INDEX=subset$foodtype, FUN=mean)
+  stds <- tapply(subset$growth, INDEX=subset$foodtype, FUN=sd)
+  shift <- c(-0.025, 0.025)[gender]
+  lines(c(1:4)+shift,avgs,lty=gender)
+  points(c(1:4)+shift,avgs)
+  segments(x0=c(1:4)+shift,y0=avgs-stds,y1=avgs+stds)
+}
+legend(1,180,c('female', 'male'),lty=c(1,2))
+axis(1,at=c(1:4),labels=unique(RatGrowth$foodtype))
+```
+
+A little excursion into plotting. Hope it helps in your assignments. In general, standard deviations might not be the right thing to plot as a measure of spread, but it is better than nothing.
+
+## Exercise A
+
+_What can Mary conclude about the role of sex and diet on the growth of baby rats?_
+
+We will use ezANOVA from the ez package to do a two-way ANOVA. This function needs a case identifier, which is not present in the data frame, but is easy to create.
+
+```{r}
+#install.packages('ez')
+library(ez)
+RatGrowth$case <- factor(c(1:nrow(RatGrowth)))
+ratAOV <- ezANOVA(data=RatGrowth, 
+                  dv=growth, 
+                  wid=case, 
+                  between=c(sex,foodtype), 
+                  return_aov=TRUE)
+print(ratAOV)
+```
+
+### A Note About Types of Sums of Squares
+
+If you tried running the same ANOVA in SPSS, or by feeding an `lm()` model into `anova()` you might have noticed small differences in the output. This is because there are differences in the details of how sums of squares (SS) are calculated. In general the idea of an ANOVA is to see if a given factor, or interaction between factors decreases the variance more than you would expect by chance. This is done by comparing a model that includes the factor or interaction with one that doesn't. The difference between type I, II and III sums of squares is in which terms are included in each of these models. In SPSS the default is Type III, in R's `anova()` and `aov()` functions it's Type I and in `ezANOVA()` it's Type II. In `ezANOVA()` can you easily switch the type, by simply specifying it in the function call:
+
+```{r}
+ratAOV.SPSS <- ezANOVA(data=RatGrowth, 
+                       dv=growth, 
+                       wid=case, 
+                       between=c(sex,foodtype), 
+                       type=3)
+print(ratAOV.SPSS)
+```
+
+As you can see, there are differences but they are small.
+
+You can also use the `Anova()` function from the `car` package (capitalization!) to use type II sums of squares easily and type III sums of squares somewhat less easily. I find `ezANOVA()` more flexible, but `Anova()` allows formula notation.
+
+Type III SS are somewhat more widely accepted, but they are not without criticism. With Type I sums of squares, the order in which factors are listed in the model matter, as they are added to the model sequentially. For most research it is hard to choose or defend which factor should go first. It might be interesting for some specific cases, and has some other properties that might be desirable, but in most cases it seems like Type II and Type III would be a better choice. The differences between those are more subtle. Mainly, in Type III SS, a model including any term is compared to a model with all other effects, whereas in Type II SS, the contribution of a main effect is only tested in light of other main effects, but not interactions, and each two-way interaction is interpreted in light of all other two-way interaction and all main effects, but not three-way interactions, and so on.
+
+Luckily, the differences are usually not large and will only show up when the design is not balanced (unequal N per cell) _and_ the design is somewhat to very complicated. When using R, I often got the comment that it must be wrong as SPSS gave a different output (under the assumption that SPSS is flawless). Altough for this course you could just use the default in your stats package, you might want to be aware of why some people will doubt your R statistics. If you ever need to decide on a Type of SS, here are the main considerations, but you can find many more online:
+
+
+I: If you decide to use Type I sums of squares, you really need to think about and describe why you ordered your factors in the specific way you did.
+
+II: If you decide to use Type II sums of squares, you should be aware that it is more sensitive to unequal cell sizes ("unbalanced design") in comparison to Type III.
+
+III: If you decide to use Type III sums of squares, the explained variance of a main effect may be very hard to interpret. This approach tends to favour higher order interactions somewhat, making your result perhaps more complicated than it has to be.
+
+I would never use Type I SS, but unfortunately, this is the default in R's `aov()` function. This doesn't matter for a one-way ANOVA, such as in the previous tutorial, but from now on it will matter.
+
+### Post-hoc Comparisons
+
+We can now do a post-hoc Tukey on the aov object we requested:
+
+```{r}
+TukeyHSD(ratAOV$aov)
+```
+
+This is very complicated output! How can we make sense of this?
+
+For sex there are only two levels, which means there is only one comparison, but there doesn't seem to be a very large difference between male and female rats in this sample.
+
+For foodtype there are four levels, which means there are six comparisons. Four of these are statistically significant and two are not. It seems that all of the significant comparisons involve a different protein level.
+
+For the interaction between sex and foodtype, there are **28** comparisons. For the most part this follows the pattern established above: when we find low protein on one side and high protein on the other the effect is significant, but when they both involve high protein or both involve low protein, there is no significant effect. Except in two cases:
+
+```
+female:hc-hp-male:hc-hp (p=0.012)
+female:lc-hp-male:hc-hp (p=0.045)
+```
+
+In both comparisons we have a high protein diet on each side, but females on one side and males on the other. This may explain the interaction between sex and foodtype. However, in one of the two cases there are also different amounts of calories in each group. This might also play a role, and it is especially interesting that when we compare males and females with high-protein and low-calorie diets there is no effect.
+
+To complete our ANOVA, we can look at **effect sizes** in the form of $\eta_p^2$ (_partial_ eta-squared):
+
+```{r}
+library(sjstats)
+eta_sq(ratAOV$aov, partial=TRUE)
+```
+
+You could calculate $\omega_p^2$ using the function from the previous tutorial.
+
+These numbers may look familiar to you. The ezANOVA function puts them in the last column ('ges' for generalized eta squared) of the table. However, if you get an `aov` object in some other way, you can use the function `eta_sq` to calculate your $\eta_p^2$s.
+
+It seems that the main effect of foodtype has the largest effect size, followed by the interaction between sex and foodtype. The interaction between sex and foodtype has a _medium_ effect size, and the main effect of foodtype has a _large_ effect size.
+
+### Least-squares means
+
+In SPSS one might use the 'compare means' option in the 'analyse' menu to further look at the interactions we found between sex and foodtype. A similar result can be achieved with the `lsmeans()` function from the `lsmeans` package that also requires the `estimability` package. It needs the same **aov object** that `TukeyHSD()` wants, as well as a way to split the data. The way you want the data split can be done in a kind of formula notation.
+
+```{r}
+#install.packages('lsmeans')
+```
+
+Let's try it, by looking at the effect of sex, given foodtype:
+
+```{r}
+library(estimability)
+library(lsmeans)
+lsm <- lsmeans(ratAOV$aov, ~sex|foodtype)
+print(lsm)
+```
+
+Since there is a large effect of foodtype, looking at foodtype given sex will show effects everywhere - but looking at the effect of sex given foodtype is more informative (try it!). Only the confidence levels for males and females given a high calory - high protein diet don't overlap. All the others do. Perhaps this is more clear if we look at the "contrasts" between the means for the sexes, given foodtype. This attaches a p-value to the differences:
+
+```{r}
+contrast(lsm)
+```
+
+So it seems that the interaction we found between foodtype and sex mostly reflects that females benefit more from a high-calorie, high-protein diet than males. Within all the other diets, these functions show no difference between males and females.
+
+## Exercise B
+
+_Describe the nature of all significant main effects and interactions._
+
+We ran a two-way ANOVA (with Type II sums of squares) on a linear model of _rat growth_, using _sex_ (male, female), and _foodtype_ (high calorie, low protein; high calorie, high protein; low calorie, low protein; low calorie, high protein) as between subject factors. There is a main effect of _foodtype_ (F(3,94)=59.95, p<.001, $\eta_p^2$=.626) and an interaction between _foodtype_ and _sex_ (F(3,94)=3.39, p=.021, $\eta_p^2$=.035). There is no main effect of _sex_. Post-hoc analyses indicate that a high-protein diet leads to more _growth_, and this is somewhat modulated by _sex_; female rats benefit more from a high-protein, high calorie diet than males.
+
+## Exercise C
+
+_Mary wants to report these results to her supervisor. How would you advise her in describing these results?_
+
+If she used Type III sums of squares, Mary should not report the main effect of foodtype, given that it is also involved in an interaction. However, she used Type II sums of squares even though the design was somewhat unbalanced.
+
+To get a sense for how (un)balanced a design is, we can tabulate cases with the `table()` function:
+
+```{r}
+table(RatGrowth[,1:2])
+```
+
+The design was pretty close to balanced, with 14 males for every diet and 11 or 12 females. The difference is between a quarter and a fifth of the sample size, and even with 11 samples there is still a reasonable amount of data contributing to every cell. The results can still be considered reliable.
+
+## Exercise D
+
+_What errors could we have made in our conclusions?_
+
+We could have made a Type I error for the main effect of foodtype and for the interaction of foodtype and sex (a false positive: claiming there is an effect where there is none). We could have made a Type II error for main effect of sex (a false negative: failure to identify a true effect).
+
+## Supplemental: Two or Three Factors?
+
+The Tukey HSD seemed to indicate that the caloric content of the diet had no effect, where most if not all of the effects of diet were due to the protein content. With the current analysis it is hard to really make that a conclusion of the research. But, we could have done a three-way ANOVA on baby rat growth growth with sex (male, female), diet protein content (low, high) and diet caloric content (low, high) as between-subject factors. I will explore this here. This is not part of the actual tutorial, but it shows that the choice of factors matters and may make the results easier to understand. This is not always the case though, understanding and interpreting a two-way interaction is doable, but with three-way interactions it already gets tricky, and with more, most of your audience will loose track. Here we only find a two-way interaction though, even with three factors.
+
+We need to add the two factors 'protein content' and 'caloric content' to our dataframe:
+
+```{r}
+# we create to new columns / variables in the dataframe that are filled with zeroes:
+RatGrowth$proteins <- 0
+RatGrowth$calories <- 0
+# we set proteins one to 1 where the diet was high in protein
+RatGrowth$proteins[which(RatGrowth$foodtype %in% c('hc-hp', 'lc-hp'))] <- 1
+# and set calories to 1 where diet was high in calories:
+RatGrowth$calories[which(RatGrowth$foodtype %in% c('hc-hp', 'hc-lp'))] <- 1
+# then we transform the columns into factors, so we can use them for the ANOVA:
+RatGrowth$proteins <- factor(RatGrowth$proteins, 
+                             levels=c(0,1), 
+                             labels=c('low.p', 'high.p'), 
+                             ordered=TRUE)
+RatGrowth$calories <- factor(RatGrowth$calories, 
+                             levels=c(0,1), 
+                             labels=c('low.c', 'high.c'), 
+                             ordered=TRUE)
+```
+
+Now we are ready to run the ANOVA with three factors:
+
+```{r}
+ratAOV3 <- ezANOVA(data=RatGrowth, 
+                   dv=growth, 
+                   wid=case, 
+                   between=c(sex,proteins,calories), 
+                   return_aov=TRUE,
+                   type=3)
+print(ratAOV3)
+```
+
+This already looks like the amount of calories didn't influence the outcome: there is a main effect of protein and an interaction between sex and protein and no other effect. The $\eta_p^2$ values for those effects are not much different from before.
+
+```{r}
+TukeyHSD(ratAOV3$aov)
+```
+
+Since there is only a main effect of protein and an interaction between sex and protein, we can first look only at those tables. The difference in growth between low and high protein diets is very significant, and this is the only entry in that table. For the interaction between protein and sex, we see that if one group has high protein and the other has low protein, it doesn't matter what the sex is, the difference in growth is always significant. But if both groups have the same protein content it gets more interesting. If the protein content is low, the sex of the rats still doesn't matter, but given a high protein content there is a difference in growth depending on sex. When I look at the boxplot, I'd say that provided a high protein diet, female rats grow more than male rats.
+
+This information was also present in the first Tukey HSD, especially in combination with the contrasts. Do you think this alternate approach payed of? How does re-doing the ANOVA with three factors compare with the `lsmeans()` and `contrast()` approach?
