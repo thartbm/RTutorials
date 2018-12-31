@@ -177,8 +177,30 @@ $(document).ready(function () {
 
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
+<!-- rnb-text-begin -->
+<p>Making figures is an important part of research. There are two major uses for figures.</p>
+<p>First of all, you will need to make a lot of figures to understand your data. For instance, in the GUI we use for manually spotting uninterpretable data each reach is represented with a figure of the trajectory as well as the velocity profile. When working with raw or half-way processed data, the actual values might not be very informative to see if your calculations were sensible (beyond not stopping because of some error in the code). It will pay off to be able to quickly make figures to inspect all the steps of your data processing pipelines. These figures can be quick and dirty, and be shown in the <strong>Plots</strong> tab, as you are the only person in the audience.</p>
+<p>In contrast, the second use of figures is for publication: in your code repository, on your poster or in your manuscript or thesis. These figures need to be clear, have legends, and probably need to be stored in files. Ideally, for code repos that accompany manuscripts, the figures in your manuscript should be generated as is by your code.</p>
+<p>There are many ways to generate figures in R. A popular and extensive package for generating figures is <code>ggplot2</code>. If you want, you should eplxore this package, and perhaps in the future there will be a tutorial on the basics of <code>ggplot2</code>. For now, you will focus on using R’s base graphics package. It allows a high level of control, and the way it works matches that of major libraries in other languages (e.g. Matlab or Python’s Matplotlib).</p>
+<p>First, we’ll do a quick and dirty figure showing the location of all 300 cities from the previous tutorial. Let’s load the data:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiY2l0aWVzIDwtIHJlYWQuY3N2KCcuLi9UdXRvcmlhbCA0L2NpdGllc19jYW5hZGEuY3N2Jywgc3RyaW5nc0FzRmFjdG9ycyA9IEYpIn0= -->
+<pre class="r"><code>cities &lt;- read.csv('../Tutorial 4/cities_canada.csv', stringsAsFactors = F)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Note that you can see how to load files from different directories here. We’ve loaded the original data set, so that the following code works, even if you didn’t complete tutorial 4.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoicGxvdChjaXRpZXMkTG9uZ2l0dWRlLCBjaXRpZXMkTGF0aXR1ZGUpIn0= -->
+<pre class="r"><code>plot(cities$Longitude, cities$Latitude)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAnVHV0b3JpYWwgRml2ZTogRmlndXJlcycKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6IGRlZmF1bHQKICBodG1sX2RvY3VtZW50OgogICAgZGZfcHJpbnQ6IHBhZ2VkCiAgcGRmX2RvY3VtZW50OiBkZWZhdWx0Ci0tLQoKYGBge3Igc2V0dXAsIGNhY2hlPUZBTFNFLCBpbmNsdWRlPUZBTFNFfQpsaWJyYXJ5KGtuaXRyKQpvcHRzX2NodW5rJHNldChjb21tZW50PScnLCBldmFsPUZBTFNFKQpzZXR3ZChkaXJuYW1lKHJzdHVkaW9hcGk6OmdldEFjdGl2ZURvY3VtZW50Q29udGV4dCgpJHBhdGgpKQpgYGAK</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAnVHV0b3JpYWwgRml2ZTogRmlndXJlcycKb3V0cHV0OgogIGh0bWxfbm90ZWJvb2s6IGRlZmF1bHQKICBodG1sX2RvY3VtZW50OgogICAgZGZfcHJpbnQ6IHBhZ2VkCiAgcGRmX2RvY3VtZW50OiBkZWZhdWx0Ci0tLQoKYGBge3Igc2V0dXAsIGNhY2hlPUZBTFNFLCBpbmNsdWRlPUZBTFNFfQpsaWJyYXJ5KGtuaXRyKQpvcHRzX2NodW5rJHNldChjb21tZW50PScnLCBldmFsPUZBTFNFKQpzZXR3ZChkaXJuYW1lKHJzdHVkaW9hcGk6OmdldEFjdGl2ZURvY3VtZW50Q29udGV4dCgpJHBhdGgpKQpgYGAKCk1ha2luZyBmaWd1cmVzIGlzIGFuIGltcG9ydGFudCBwYXJ0IG9mIHJlc2VhcmNoLiBUaGVyZSBhcmUgdHdvIG1ham9yIHVzZXMgZm9yIGZpZ3VyZXMuCgpGaXJzdCBvZiBhbGwsIHlvdSB3aWxsIG5lZWQgdG8gbWFrZSBhIGxvdCBvZiBmaWd1cmVzIHRvIHVuZGVyc3RhbmQgeW91ciBkYXRhLiBGb3IgaW5zdGFuY2UsIGluIHRoZSBHVUkgd2UgdXNlIGZvciBtYW51YWxseSBzcG90dGluZyB1bmludGVycHJldGFibGUgZGF0YSBlYWNoIHJlYWNoIGlzIHJlcHJlc2VudGVkIHdpdGggYSBmaWd1cmUgb2YgdGhlIHRyYWplY3RvcnkgYXMgd2VsbCBhcyB0aGUgdmVsb2NpdHkgcHJvZmlsZS4gV2hlbiB3b3JraW5nIHdpdGggcmF3IG9yIGhhbGYtd2F5IHByb2Nlc3NlZCBkYXRhLCB0aGUgYWN0dWFsIHZhbHVlcyBtaWdodCBub3QgYmUgdmVyeSBpbmZvcm1hdGl2ZSB0byBzZWUgaWYgeW91ciBjYWxjdWxhdGlvbnMgd2VyZSBzZW5zaWJsZSAoYmV5b25kIG5vdCBzdG9wcGluZyBiZWNhdXNlIG9mIHNvbWUgZXJyb3IgaW4gdGhlIGNvZGUpLiBJdCB3aWxsIHBheSBvZmYgdG8gYmUgYWJsZSB0byBxdWlja2x5IG1ha2UgZmlndXJlcyB0byBpbnNwZWN0IGFsbCB0aGUgc3RlcHMgb2YgeW91ciBkYXRhIHByb2Nlc3NpbmcgcGlwZWxpbmVzLiBUaGVzZSBmaWd1cmVzIGNhbiBiZSBxdWljayBhbmQgZGlydHksIGFuZCBiZSBzaG93biBpbiB0aGUgKipQbG90cyoqIHRhYiwgYXMgeW91IGFyZSB0aGUgb25seSBwZXJzb24gaW4gdGhlIGF1ZGllbmNlLgoKSW4gY29udHJhc3QsIHRoZSBzZWNvbmQgdXNlIG9mIGZpZ3VyZXMgaXMgZm9yIHB1YmxpY2F0aW9uOiBpbiB5b3VyIGNvZGUgcmVwb3NpdG9yeSwgb24geW91ciBwb3N0ZXIgb3IgaW4geW91ciBtYW51c2NyaXB0IG9yIHRoZXNpcy4gVGhlc2UgZmlndXJlcyBuZWVkIHRvIGJlIGNsZWFyLCBoYXZlIGxlZ2VuZHMsIGFuZCBwcm9iYWJseSBuZWVkIHRvIGJlIHN0b3JlZCBpbiBmaWxlcy4gSWRlYWxseSwgZm9yIGNvZGUgcmVwb3MgdGhhdCBhY2NvbXBhbnkgbWFudXNjcmlwdHMsIHRoZSBmaWd1cmVzIGluIHlvdXIgbWFudXNjcmlwdCBzaG91bGQgYmUgZ2VuZXJhdGVkIGFzIGlzIGJ5IHlvdXIgY29kZS4KClRoZXJlIGFyZSBtYW55IHdheXMgdG8gZ2VuZXJhdGUgZmlndXJlcyBpbiBSLiBBIHBvcHVsYXIgYW5kIGV4dGVuc2l2ZSBwYWNrYWdlIGZvciBnZW5lcmF0aW5nIGZpZ3VyZXMgaXMgYGdncGxvdDJgLiBJZiB5b3Ugd2FudCwgeW91IHNob3VsZCBlcGx4b3JlIHRoaXMgcGFja2FnZSwgYW5kIHBlcmhhcHMgaW4gdGhlIGZ1dHVyZSB0aGVyZSB3aWxsIGJlIGEgdHV0b3JpYWwgb24gdGhlIGJhc2ljcyBvZiBgZ2dwbG90MmAuIEZvciBub3csIHlvdSB3aWxsIGZvY3VzIG9uIHVzaW5nIFIncyBiYXNlIGdyYXBoaWNzIHBhY2thZ2UuIEl0IGFsbG93cyBhIGhpZ2ggbGV2ZWwgb2YgY29udHJvbCwgYW5kIHRoZSB3YXkgaXQgd29ya3MgbWF0Y2hlcyB0aGF0IG9mIG1ham9yIGxpYnJhcmllcyBpbiBvdGhlciBsYW5ndWFnZXMgKGUuZy4gTWF0bGFiIG9yIFB5dGhvbidzIE1hdHBsb3RsaWIpLgoKRmlyc3QsIHdlJ2xsIGRvIGEgcXVpY2sgYW5kIGRpcnR5IGZpZ3VyZSBzaG93aW5nIHRoZSBsb2NhdGlvbiBvZiBhbGwgMzAwIGNpdGllcyBmcm9tIHRoZSBwcmV2aW91cyB0dXRvcmlhbC4gTGV0J3MgbG9hZCB0aGUgZGF0YToKCmBgYHtyfQpjaXRpZXMgPC0gcmVhZC5jc3YoJy4uL1R1dG9yaWFsIDQvY2l0aWVzX2NhbmFkYS5jc3YnLCBzdHJpbmdzQXNGYWN0b3JzID0gRikKYGBgCgpOb3RlIHRoYXQgeW91IGNhbiBzZWUgaG93IHRvIGxvYWQgZmlsZXMgZnJvbSBkaWZmZXJlbnQgZGlyZWN0b3JpZXMgaGVyZS4gV2UndmUgbG9hZGVkIHRoZSBvcmlnaW5hbCBkYXRhIHNldCwgc28gdGhhdCB0aGUgZm9sbG93aW5nIGNvZGUgd29ya3MsIGV2ZW4gaWYgeW91IGRpZG4ndCBjb21wbGV0ZSB0dXRvcmlhbCA0LgoKYGBge3J9CnBsb3QoY2l0aWVzJExvbmdpdHVkZSwgY2l0aWVzJExhdGl0dWRlKQpgYGAKCg==</div>
 
 
 

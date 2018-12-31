@@ -12,3 +12,24 @@ library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
+
+Making figures is an important part of research. There are two major uses for figures.
+
+First of all, you will need to make a lot of figures to understand your data. For instance, in the GUI we use for manually spotting uninterpretable data each reach is represented with a figure of the trajectory as well as the velocity profile. When working with raw or half-way processed data, the actual values might not be very informative to see if your calculations were sensible (beyond not stopping because of some error in the code). It will pay off to be able to quickly make figures to inspect all the steps of your data processing pipelines. These figures can be quick and dirty, and be shown in the **Plots** tab, as you are the only person in the audience.
+
+In contrast, the second use of figures is for publication: in your code repository, on your poster or in your manuscript or thesis. These figures need to be clear, have legends, and probably need to be stored in files. Ideally, for code repos that accompany manuscripts, the figures in your manuscript should be generated as is by your code.
+
+There are many ways to generate figures in R. A popular and extensive package for generating figures is `ggplot2`. If you want, you should eplxore this package, and perhaps in the future there will be a tutorial on the basics of `ggplot2`. For now, you will focus on using R's base graphics package. It allows a high level of control, and the way it works matches that of major libraries in other languages (e.g. Matlab or Python's Matplotlib).
+
+First, we'll do a quick and dirty figure showing the location of all 300 cities from the previous tutorial. Let's load the data:
+
+```{r}
+cities <- read.csv('../Tutorial 4/cities_canada.csv', stringsAsFactors = F)
+```
+
+Note that you can see how to load files from different directories here. We've loaded the original data set, so that the following code works, even if you didn't complete tutorial 4.
+
+```{r}
+plot(cities$Longitude, cities$Latitude)
+```
+

@@ -26,6 +26,10 @@ How to push merge requests to someone else's GitHub project.
 
 
 
+source:
+https://help.github.com/articles/syncing-a-fork/
+
+
 # Open Science Framework
 
 The Open Science Framework (OSF) plays a role that GitHub can not.
