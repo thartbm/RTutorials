@@ -23,7 +23,11 @@ You can open this file outside of R, for example with a text editor or a spreads
 
 ## Reading a CSV file
 
-Let's read the file's content into R:
+Let's read the file's content into R. In R Studio, you could go to the **Files** tab, browse to the folder with your file and click on it to get some options for opening the file:
+
+![R Studio options for opening a file](view_file.png)
+
+If you do this and pick _View File_, you can see the contents of the original file. In the first line there are the column names that will end up in the data frame, below that is the actual data. In this case that is 300 cities in Canada with some statistics on them. While this is great for inspecting a file, you want to actually have a data frame in R that you can work with. You could pick the second option ( _Import Dataset_), but ultimately, you'll are working with many, many data files, or share code with others. That means that you don't want to manually open or load data all the time, you want to automate it. However, when you pick the _Import Dataset_ option, the pop-up screen will not only give you a preview of the data, but also show the code that will be used to import the dataset. One of the lines will look a bit like this:
 
 ```{r}
 cities <- read.csv('cities_canada.csv', stringsAsFactors=F)
@@ -31,7 +35,7 @@ cities <- read.csv('cities_canada.csv', stringsAsFactors=F)
 
 You have used the function `read.csv()` to read in the csv file. You have to provide it the filename, and in this case there is one column with string variables, the names of the cities, but you don't want that to be a "factor".
 
-Since the variable `cities` got the output of the `read.csv()` function, it should now be a data frame and you can use `str()` and others to have a look at it. Complete the following chunk to examine the structure of the data frame `cities`:
+Since the variable `cities` got the output of the `read.csv()` function, it should now be a data frame and you can use `str()` and friends to have a look at it. Complete the following chunk to examine the structure of the data frame `cities`:
 
 ```{r}
 str()
@@ -53,6 +57,8 @@ Let's see if that worked as expected, fix the chunk below. You won't get an erro
 str(cities)
 ```
 
+You should see a data frame with observations on 4 variables.
+
 Now that that's done, you want to sort the data frame alphabetically. That means you want to use all rows, in the order given by the column City. You can use the `order()` function to get a list of indices that would sort the list provided as input to the function. Make sure this chunk only uses the City column:
 
 ```{r}
@@ -73,15 +79,17 @@ Let's check if the whole data frame was sorted by looking at Abbotsford in the o
 cities[which(cities$City == 'Abbotsford'),]
 ```
 
-And in the new data frame (complete this chunk):
+And in the new data frame. Correct this chunk, so that it indeed shows the data for Abbotsford:
 
 ```{r}
 my_cities[which(cities$City == 'Abbotsford'),]
 ```
 
+You could check some more rows of the data frame, but it appears you have removed the Rank column, and sorted the data frame alphabetically by city name. We set out to store this data frame for future use.
+
 ## Write CVS files
 
-You are happy with this new data frame, so we should store it. For this, you can use the function `write.csv()`. Let's look up the help for this function:
+You are happy with this new data frame, so you should store it. In general, when you have completed a coherent set of changes on some dataset or when you have created a fully new data frame it's a good idea to store your work. You'll get more experienced in when this makes sense - and it varies per project depending on the nature of the data and the research question. For us, for example, when you have calculated the angular deviation from the target for each reach of a task, it makes sense to not do those calculations again, and instead store the data so you can work on it another day. For this, you can use the function `write.csv()`. Let's look up the help for this function:
 
 ```{r}
 help(write.csv)
@@ -111,6 +119,34 @@ head(my_cities)
 ```
 
 So that appears to have worked!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
