@@ -1,8 +1,8 @@
 ---
 title: 'Tutorial Three: One-Way ANOVA'
 output:
-  pdf_document: default
   html_notebook: default
+  pdf_document: default
 ---
 
 ```{r setup, cache=FALSE, include=FALSE}
@@ -42,7 +42,7 @@ Why would there be a difference in recycling behavior between communities of dif
 Above you see the table from the Word document. It has the three communities next to each other. This is called 'wide format', but R likes 'long format'. Sometimes, we have to convert data from one format to another. The data file we use is already in long format, so let's load that and have a look at it.
 
 ```{r}
-load('Tutorial_3_Recycling.rda')
+load('data/Tutorial_3_Recycling.rda')
 ```
 
 Using the Environment tab, you can see that instead of having a column for each separate community, we have all the recycling scores in a single column, and then also code the community in another column. This allows testing effects of one variable on another. In this case: how well does _community_ predict _recycling_ behaviour?

@@ -38,7 +38,7 @@ R Studio is an integrated development environment ("IDE") to make working in R e
 
 After step 4 you should end up with something like this:
 
-![Screenshot of R Studio running on my laptop](RStudio.png)
+![Screenshot of R Studio running on my laptop](img/RStudio.png)
 
 There is a lot to see here, take some time to inspect some of it. The screen is divided into 4 panels or panes:
 
@@ -61,7 +61,7 @@ These tutorials have you do similar things, but they focus on what we anticipate
 
 I will try to create R Notebooks with the necessary R code to do the tutorials. You can view them as HTML files, but you can also open them in R Studio where you can interactively play with the embedded code. This works through "code chunks", that look like this:
 
-![A simple code chunk.](codechunk.png)
+![A simple code chunk.](img/codechunk.png)
 
 This is a simple example, but the gray part is the code chunk itself. The {r} part says that it has R code (other types of code are allowed as well), and on the top right are a few buttons. The green triangle button runs the code, and this might have some output: some text or figures, or maybe a file is stored. In this case, the result of the addition is shown: 2.
 

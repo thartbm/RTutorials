@@ -20,7 +20,7 @@ _Does the amount of drug taken by the patient affect migraines?_
 Let's load the data and get the structure:
 
 ```{r}
-load('Tutorial_6_MigraineDosage_long.rda')
+load('data/Tutorial_6_MigraineDosage_long.rda')
 doses.full$drug <- factor(doses.full$drug, 
                           levels=c('Placebo','DrugA','DrugB'))
 #View(doses.full)
