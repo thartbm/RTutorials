@@ -36,13 +36,13 @@ You'll start learning about projects and notebooks briefly, but all of this only
 
 First you'll wonder how you can start a project in R Studio. Well, you should use the projects menu for that. It is not in the main menu, as it supercedes it. The project menu is in the top right of the R Studio window:
 
-![R Studio's project menu](projects_menu.png)
+![R Studio's project menu](img/projects_menu.png)
 
 It will show the name of the project you are currently working on, and it will allow you to switch to a few of the recent projects you've been working on. It will also give you some options to change your current project.
 
 From that menu, you select the option "New Project...". R Studio might ask you if you want to save your current work, and after that is solved you will see these three options:
 
-![Three ways to create a new R Studio project](projects_options.png)
+![Three ways to create a new R Studio project](img/projects_options.png)
 
 
 Converting an existing directory to an R Studio project is sometimes problematic, and since you haven't looked at GitHub options for version control yet, you should use the 'new directory' option for now. Make sure you create a new directory with a fitting name.

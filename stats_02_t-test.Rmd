@@ -1,8 +1,8 @@
 ---
 title: 'Tutorial Two: T-Tests'
 output:
-  pdf_document: default
   html_notebook: default
+  pdf_document: default
 ---
 
 ```{r setup, cache=FALSE, include=FALSE}
@@ -20,7 +20,7 @@ _IQ Scores: 102, 115, 91, 109, 121, 129, 116, 93, 115, 96, 105, 110, 99, 102, 10
 First we load the data and check what it looks like.
 
 ```{r}
-load('Tutorial_2A_IQscores.rda')
+load('data/Tutorial_2A_IQscores.rda')
 IQscores <- IQscores$IQscores # this will make our life a bit easier
 summary(IQscores)
 ```
@@ -131,7 +131,7 @@ I know four tests for the homogeneity of variance in two samples:
 
 Levene's test and the Fligner-Killeen test are more robust than the F-test and Bartlett's test, but Levene's test seems to be a standard of sorts, so let's try this test out on our data. It is not part of R by default, but comes from a "package", an extension of R if wyou will. You can go to the **Packages** tab and see if you have `car` installed. If not, install it now. This can be done through the **Packages** tab:
 
-![](RStudio_installpackage.png)
+![](img/RStudio_installpackage.png)
 &nbsp;
 
 You can also install packages with the following command:

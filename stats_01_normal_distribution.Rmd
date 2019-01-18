@@ -15,12 +15,12 @@ setwd("~/Desktop/R tutorials/2017/Tutorial 1")
 
 First we need to create a script. This can be done through the File option in menu, or through the drop-down button next to the new file icon (with a plus in a green circle):
 
-![](RStudio_newscript.png)
+![](img/RStudio_newscript.png)
 </br>&nbsp;
 
 As you can see, it's the first option in the drop-down menu and has the short cut: CTRL+SHIFT+N. Once you hit this, a new tab will open in the Source pane, and the Source pane will be opened if it wasn't already. Once you have tried out some commands in the Console, you should put the ones that work in your script, and save the script regularly. You can run the whole script by clicking the Run button at the top of the tab for your script in the Source pane.
 
-![](RStudio_runscript.png)
+![](img/RStudio_runscript.png)
 &nbsp;
 
 Here, I have created a very simple script to calculate `1+1` and then hit the Run button. You can see that the correct answer is also "returned" in the Console.
@@ -43,7 +43,7 @@ You can see that a data frame appeared in the Environment tab. It's called 'Tuto
 
 By now, your R Studio window should look something like this:
 
-![](RStudio_imported_data.png)  
+![](img/RStudio_imported_data.png)  
 &nbsp;
 
 The advantage of using a command to load the data is that we can put it in a script. We can also read it from the .csv file:

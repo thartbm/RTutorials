@@ -17,7 +17,7 @@ _Dr. Blue would like to examine the effect of drug type (no drugs, placebo, drug
 Let's load the data and look at it:
 
 ```{r}
-load('Tutorial_5_Migraine.rda')
+load('data/Tutorial_5_Migraine.rda')
 str(Migraine)
 ```
 
