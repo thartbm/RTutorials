@@ -1,0 +1,96 @@
+---
+title: 'Tutorial Twelve: Workflow'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  html_notebook: default
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='', eval=FALSE)
+```
+
+Here I'll show you the basic workflow I've settled on for now. It's shaped by some experience and meant to make it easier for others to work with your code. _Others_ here are your lab mates, your PI, your (international) collaborators, your reviewers, your readers, your students, your teachers and most importantly: your future self.
+
+This workflow assumes that you have thoughtfully designed an experiment to answer a specific research question, that the experiment has been implemented carefully and that you have collected the planned amount of data.
+
+# Step 0: Private Project for Raw Data Processing
+
+You might want to have two R Studio projects for one research project. The first project is meant to get all the raw data into a presentable shape. That is, the raw data might be messy, large and not that easy for other to work with. For now, I don't feel comfortable having that data take up valuable space on other people's computers (a.k.a. data repositories) and to some extent I don't feel comfortable having other people look at that data. Some of this is because the raw data we used to collect was not anonymous, and part of the initial processing is anonymizing it. I may change my position on this, as we start collecting anonymous data and research practices are changing rapidly, so that raw data might become expected.
+
+As the pre-processing steps should only take place on your computer, you don't need to make this part public. It also means that whatever pre-processing steps you take, they should be non-controversial, decided on in advance or have some other guarantee that you won't change your mind on this step. Alternatively (and I've done this in the "Baseline" project, as you can see on OSF), the raw data is not in the public project's code, but the pre-processing code is. That way, people can't access the raw data, but they can see what you are doing to it.
+
+# Step 1: Public Code Repository
+
+Once you've finalized data pre-processing it makes sense to first take care of making things public. There are two main reasons for this as early as possible: 1) you want others to be able to pitch in as soon as possible, and 2) it is harder to slap a public repository on a project later.
+
+## Step 1A: Make a GitHub Repository
+
+For technical reasons it is easier to first make a GitHub repository for your code. Give it a simple but recognizable name, that doesn't have spaces or other special characters. That will keep your URLs short, readable and memorizable. For example, the GitHub repository for these tutorials is not called "R-Tutorials for learning how to code with R and perform statistics". First of all, that's too long andf has a hyphen in it. Second of all, all the spaces will have to be taken care of with special codes that are not fun to have to type, in case that happens to be what somebody will have to do in some instance. Furthermore, the topics these tutorials might exand at some later stage. Even now, the tutorial on `rticles` is not really a coding tutorial, and neither is this one. So perhaps these will split of into a third set of tutorials on how to do science with R / R Studio.
+
+## Step 1B: Make an OSF project
+
+You can now go to OSF (in a separate tab, and keep the GitHub repo open) and create a new project there. You want to add a component to your OSF project that points to the right GitHub repository. At this point, you can change the wiki of the OSF project to include a link to the GitHub repository as well, and similarly change the readme of the GitHub repo to include a link to the OSF project. This is part of the documentation, and while your code and GitHub repository should point to each other, putting the correct links in more human readable form will help people navigate the docuemnts related to your research.
+
+For data storage, make sure to pick the server location that has the legal implications most desirable for you. In general, I would recommend against using a server in the US (even if you work there) as the legal protection there is flimsy at best. For those not working the US, pick a server location that closest matches the laws in your country, or the best option: is actually *in* your country. Then upload the pre-processed data in a way that makes sense for this project. If there are lots of files you might want to separate kinds of files into folders.
+
+Of course you want to use short, informative names that are both human readable and useful for coding. For example, if you have three kinds of data collected in several groups of participant, you could use filenames that indicate both in a consistent manner. That is: use the same, single string to indicate the same group throughout all your code and use the same, single string to indicate the kind of data in the file. The same strings should be used for function names in the code the pertain to those kinds of data or those groups (if applicable).
+
+## Step 1C
+
+Create a new R Studio project based on the GitHub repo and use the data from OSF. There prbably have to be subfolders, and it makes sense to organize your project similar to how an R package is organize.
+
+- R
+- src
+- data
+- doc
+- - fig
+- man
+
+Tell the .gitignore file to not put your data files or output pdf files and such into the GitHub repo. Your data should be on OSF and the GitHub repo should only have code.
+
+EXPLAIN
+
+Step 1 should be short.
+
+# Step 2: Develop Analysis
+
+Now comes the actual work
+
+## Step 2A
+
+Use the `osfr` package....?
+
+Make functions that download and plot your data, and do the analyses on that data.
+
+## Step 2B
+
+In parallel you create a notebook that will showcase your collection of figures and analyses. In words, explain questions, methods, data, analyses and results. And add chunks of code that run your functions.
+
+This will take lots of time, will be done iteratively and may now be done in collaboration with others.
+
+## Step 2C
+
+That is: others may fork your project on GitHub, create a branch to solve a specific problem. And when they think they have solved it, they may make a pull request for you to pull that branch into your 'upstream' project.
+
+
+EXPLAIN HOW TO DO THIS!!!!!
+
+
+# Step 3: Write Manuscript
+
+Once the data analysis is done and you know the conclusions that can be drawn from the data based on your analyses, you can start writing your paper.
+
+LINK TO 10 SIMPLE RULES FOR STRUCTURING A PAPER
+
+In the paper, preferable in the abstract, link to your OSF project, and/or any pre-prints that are already there (initially there are none).
+
+Make sure that the code in the GitHub repo produces the figures that are in the paper, and that it downloads the data from OSF and does not rely on local copies, as others won't have them.
+
+Do pre-print thing and create a twitter thread to promote it so as to optimize chances of getting useful feedback.
+
+Give it two weeks so that people have a chance to give some feedback, but don't wait too long with submitting the paper with a journal.
+
+When you make changes to the manuscript based on reviewers comments: update the pre-print right before submitting. Do not copy the journal's lay-out or their typo corrections.
