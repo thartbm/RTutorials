@@ -10,7 +10,6 @@ output:
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
-#setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
 
 In the last few tutorials, including this one, you will learn how to organize your data, your R code and your manuscripts in ways that make it accessible to "other people". One person that you should always include in "other people" is your future self, but it will also include readers of your articles, such as reviewers, and people working on the same project with you. You want to do all of these people a favour so that if they have the data files and the code, they can re-run the analysis and produce the figures for your poster or paper. This means structuring and explaining the code, in several ways.
