@@ -10,7 +10,6 @@ output:
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
 
 Nobody like to do things twice. So once you have crafted an awesome function you will want to store it in some way so that you don't have to type it in every time you need it. In R you use scripts for this. They are simple text files with the code that you want to run. You could put simple commands in there, but you shouldn't. It is better to only store functions in scripts and then call those functions.

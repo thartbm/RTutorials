@@ -10,5 +10,5 @@ output:
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
+
