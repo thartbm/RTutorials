@@ -12,8 +12,6 @@ install.packages('knitr')
 library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
-I have changed this
-
 
 In this first tutorial you will be introduced to a few basic variable types and how to change them: numbers, text, sequences of numbers (and texts) and you'll briefly touch on matrices.
 
