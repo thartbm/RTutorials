@@ -1,4 +1,6 @@
 *.pdf
+*.nb.html
+
 
 book/
 book/*

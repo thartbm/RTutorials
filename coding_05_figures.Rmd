@@ -10,7 +10,6 @@ output:
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
 
 Making figures is an important part of research. There are two major uses for figures.
@@ -24,7 +23,7 @@ There are many ways to generate figures in R. A popular and extensive package fo
 First, we'll do a quick and dirty figure showing the location of all 300 cities from the previous tutorial. Let's load the data:
 
 ```{r}
-cities <- read.csv('../Tutorial 4/cities_canada.csv', stringsAsFactors = F)
+cities <- read.csv('data/cities_canada.csv', stringsAsFactors = F)
 ```
 
 Note that you can see how to load files from different directories here. We've loaded the original data set, so that the following code works, even if you didn't complete tutorial 4.
@@ -33,3 +32,16 @@ Note that you can see how to load files from different directories here. We've l
 plot(cities$Longitude, cities$Latitude)
 ```
 
+# Titles (main, xlab, ylab)
+
+# Axes (xlim, ylim, asp)
+
+# margins (par) & tick marks
+
+# fonts, font size (par?)
+
+# plot panels (par(mfrow) and hint at others)
+
+# colors, line styles, marker styles (how RGB works)
+
+# pdf or svg output
