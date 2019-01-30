@@ -8,7 +8,6 @@ output:
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='')
-#setwd("~/Desktop/R tutorials/2017/Tutorial 7")
 ```
 
 _York's Centre for Student Success tries to promote health with the philosophy this will help academic achievement as well. Dr. Steah Late works for the Centre and is interested in Body Mass Index (BMI). In the literature, physical activity, impulse control, percentage of carbohydrates in diet and sleep quality are described as potential predictors of BMI. She collects data on BMI and those four predictor variables from 72 students._

@@ -8,7 +8,6 @@ output:
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='')
-#setwd("~/Desktop/R tutorials/2017/Tutorial 2")
 ```
 
 # Exercise A: one-sample t-test

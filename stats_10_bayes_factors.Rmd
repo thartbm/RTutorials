@@ -1,13 +1,41 @@
 ---
 title: 'Tutorial Ten: Bayes Factors'
 output:
-  pdf_document: default
+  html_notebook: default
   html_document:
     df_print: paged
-  html_notebook: default
+  pdf_document: default
 ---
 
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
+
+Recently the Null-Hypothesis Testing Statistical framework (NHST) has received some bad press, and part of the scientific community is pushing for Bayesian statistics instead. We should at least learn the basics and be able to read papers that use them. In this tutorial we will explore one of the simpler ones: Bayes Factors.
+
+Bayes Factors do use a null hypothesis and an alternative hypothesis as well, and it seems to me they will usually be related to NHST stats.
+
+The classic Bayes formula goes like this:
+
+$p(A) \cdot \frac{p(B|A)}{p(B)} = p(A|B)$
+
+That is: the prior multiplied by the likelihood equals the posterior. The prior is our prior belief in A: the probability ($p()$) with which we think A is true, before seeing any evidence. The posterior is the probability that A _given_ B ($A|B$), that is, it represents our updated belief that A is true, after taking into account some new data (B).
+
+The likelihood term is a little more complex. Sometimes you will not see the normalization by dividing by the probability of B occurring regardless of anything else (it's "base rate"). I'm not always sure why, but it could be because it is fully unknown, or because it makes no sense in the experiment.
+
+Either way, the whole term gives you the probability of observing the data (B) given the hypothesis (A), normalized by the base rate of B's occurrence. So if B is very rare, but happens a lot in your experiment (and this is predicted by your hypothesis), then your belief in the hypothesis will be increased. However, if B is very common, or occurs at it's base rate, nothing much may change in your degree of belief in A. Your belief in A can also decrease, if B occurs less often than it's base rate.
+
+So this normalized likelihood term expresses the strength of the evidence that the data provides for the hypothesis: how much does it change our belief in the hypothesis? Note that our posterior  belief is hard to get to 100% and that it also depends on our prior belief. Unlikely claims require very strong evidence!
+
+It seems to me that the Bayes' Factor is highly related to this normalized likelihood term. Here's a formula that includes the Bayes Factor, prior times Bayes Factor equals posterior:
+
+$\frac{p(H_1)}{p(H_0)} \cdot \frac{p(D | H_1)}{p(D | H_0)} = \frac{p(H_1 | D)}{p(H_0 | D)}$
+
+Here, we weight two hypotheses that might sound familiar: the null hypothesis ($H_0$) and an alternative hypothesis ($H_1$). By the way, if we weight the alternative hypothesis over the null hypothesis (as above) then we have a $BF_{10}$, if we go the other way around we have a $BF_{01}$. The two can be very simply converted into each other, so don't let that confuse you:
+
+$BF_{10} = \frac{1}{BF_{01}}$
+
+Notice that a lot of why it is hard to learn NHST is that in NHST we calculate p-values: the probability of observing the data given that the null-hypothesis is true. But who cares? We don't need probabilities of observing data... we need probabilities of a hypothesis being true or false. More specifically, we also don't care about the null-hypothesis at all. Instead, we want to know if the alternative hypothesis is true given the data, right? Now look at the posterior of the above formula. It weights the probability of the alternative hypothesis and the null hypothesis being true given the data. How awesome is that!
+
+More importantly, the Bayes Factor is a number between 0 and $\infty$, and when it is 1, the data supports both hypotheses equally well. So in general, when you find that, you should still report it, but then do another experiment that approaches it in a different way.

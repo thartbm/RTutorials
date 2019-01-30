@@ -8,8 +8,6 @@ output:
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='')
-#setwd("~/Desktop/R tutorials/2017/Tutorial 5")
-#setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
 
 _Dr. Blue would like to examine the effect of drug type (no drugs, placebo, drug A, drug B) on the incidence of migraines. He recruited a sample of patients classified as having frequent migraines. Each patient was asked to take 50 mg of each type of drug for a two month period of time and document the frequency and severity of their migraines using a migraine assessment scale. A one month break in which patients refrained from taking any medication was included in between each two month session. The order of drug exposure was counterbalanced._

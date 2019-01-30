@@ -8,7 +8,6 @@ output:
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='')
-#setwd("~/Desktop/R tutorials/2017/Tutorial 6")
 ```
 
 _Dr. Blue recruited a new sample of migraine sufferers. He would now like to know if the dose of the drug (25 mg, 100 mg, 200 mg) in addition to the type of drug (placebo, Drug A, Drug B) would have an effect on the frequency and severity of migraines._

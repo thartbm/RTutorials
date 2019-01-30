@@ -8,7 +8,6 @@ output:
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
 opts_chunk$set(comment='')
-#setwd("~/Desktop/R tutorials/2017/Tutorial 4")
 ```
 
 _Mary is interested in how sex and diet affect the growth of rats over their first month of life. She obtains a sample of 102 baby rats at birth and randomly assigns them to one of four diet groups: high calorie-low protein, high calorie-high protein, low calorie-low protein and low calorie-high protein. The baby rats are fed their specified diet for one month, following which Mary re-weighs each baby rat._
