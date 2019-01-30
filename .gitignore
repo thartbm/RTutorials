@@ -1,6 +1,6 @@
 *.pdf
-*.nb.html
 *.html
+*.nb.html
 book/
 book/*
 # *.png files should be allowed as those are usually screenshots that I include
