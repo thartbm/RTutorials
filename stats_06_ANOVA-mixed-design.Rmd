@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial 6: Mixed Design ANOVA'
+title: 'Mixed-Design ANOVA'
 output:
   pdf_document: default
   html_notebook: default

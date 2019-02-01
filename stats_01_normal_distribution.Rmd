@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial One: Normally Distributed Data'
+title: 'Normally Distributed Data'
 output:
   html_notebook: default
   pdf_document: default

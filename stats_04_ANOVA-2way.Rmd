@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Four: Two-Way ANOVA'
+title: 'Two-Way ANOVA'
 output:
   pdf_document: default
   html_notebook: default

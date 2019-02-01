@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Five: One-Way, Repeated Measures ANOVA'
+title: 'One-Way, Repeated Measures ANOVA'
 output:
   pdf_document: default
   html_notebook: default

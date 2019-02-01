@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Two: T-Tests'
+title: 'T-Tests'
 output:
   html_notebook: default
   pdf_document: default
