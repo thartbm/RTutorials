@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial 7: Correlation, Regression and Multiple Regression'
+title: 'Correlation, Regression and Multiple Regression'
 output:
   html_notebook: default
   pdf_document: default

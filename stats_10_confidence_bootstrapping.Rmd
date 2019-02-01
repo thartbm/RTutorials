@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Nine: Confidence Intervals and Bootstrapping'
+title: 'Confidence Intervals and Bootstrapping'
 output:
   pdf_document: default
   html_document:

@@ -1,0 +1,12 @@
+---
+title: 'Linear Mixed Effects Models'
+output:
+  html_notebook: default
+  pdf_document: default
+author: Shanaathanan Modchalingam
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='')
+```
