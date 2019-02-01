@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Six: Flow Control'
+title: 'Flow Control'
 output:
   html_notebook: default
   html_document:

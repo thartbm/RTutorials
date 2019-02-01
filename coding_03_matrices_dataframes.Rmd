@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Three: Matrices and Data Frames'
+title: 'Matrices and Data Frames'
 output:
   html_notebook: default
   html_document:

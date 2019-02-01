@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Eight: Scripts'
+title: 'Scripts'
 output:
   html_notebook: default
   html_document:

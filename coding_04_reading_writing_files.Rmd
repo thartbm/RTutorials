@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Four: Reading & Writing Data Files'
+title: 'Reading & Writing Data Files'
 output:
   html_notebook: default
   html_document:

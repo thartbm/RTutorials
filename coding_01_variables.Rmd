@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial One: Variables'
+title: 'Variables'
 output:
   pdf_document: default
   html_document:
