@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Twelve: Workflow'
+title: 'Workflow'
 output:
   pdf_document: default
   html_document:

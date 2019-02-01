@@ -1,5 +1,5 @@
 ---
-title: 'Tutorial Ten: GitHub and the Open Science Framework'
+title: 'GitHub and the Open Science Framework'
 output:
   html_notebook: default
   html_document:

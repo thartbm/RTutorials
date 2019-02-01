@@ -1,10 +1,11 @@
 ---
-title: 'Tutorial Eleven: rticles and preprint servers'
+title: 'Model Fitting'
 output:
   html_notebook: default
   html_document:
     df_print: paged
   pdf_document: default
+author: Jennifer Ruttle
 ---
 
 ```{r setup, cache=FALSE, include=FALSE}
@@ -12,3 +13,6 @@ library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
 
+optim (and alternatives)
+
+grid search
