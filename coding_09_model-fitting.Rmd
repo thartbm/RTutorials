@@ -30,7 +30,12 @@ This loads two data frames. Both have 5 columns, first an angle the experiment w
 par(mfrow=c(1,2))
 for (dfno in c(1,2)) {
   df <- list(localization,mislocalization)[[dfno]]
-  plot(cos(seq(0,pi/2,(pi/2)/100))*10, sin(seq(0,pi/2,(pi/2)/100))*10, type='l', col='#AAAAAA', main=c('aligned','misaligned')[dfno], xlab='x [cm]', ylab='y [cm]', xlim=c(-2,12),ylim=c(-2,12),bty='n', ax=F,asp=1)
+  plot( c(0,cos(seq(0,pi/2,(pi/2)/100))*10, 0),
+        c(0,sin(seq(0,pi/2,(pi/2)/100))*10, 0),
+        type='l', col='#AAAAAA', 
+        main=c('aligned','misaligned')[dfno], xlab='x [cm]', ylab='y [cm]', 
+        xlim=c(-2,12), ylim=c(-2,12),
+        bty='n', ax=F, asp=1)
   points(df$tapx_cm,df$tapy_cm)
   axis(side=1,at=c(0,5,10))
   axis(side=2,at=c(0,5,10))
@@ -112,7 +117,7 @@ Run this code to see if `optimx` is installed on your system:
 if ('optimx' %in% installed.packages()) {
   cat('optimx is installed, you can continue with the next exercise\n')
 } else {
-  cat('optimx is NOT installed, please install it before coninueing with the next exercise\n')
+  cat('optimx is NOT installed, please install it before doing the next exercise\n')
 }
 ```
 
@@ -210,7 +215,7 @@ res <- microbenchmark('Nelder-Mead' = optimx( par = c( 'x'=0.1, 'y'=0.1),
                                        coords = miscoords, radius = 10),
                       'L-BFGS-B' = optimx( par = c( 'x'=0.1, 'y'=0.1), 
                                            fn = circleFitError, 
-                                           lower = c(-5,-5), upper=c(5,5), # we now have to specify boundaries!
+                                           lower = c(-5,-5), upper=c(5,5), # boundaries!
                                            method='L-BFGS-B', 
                                            coords = miscoords, radius = 10),
                       times = 100
@@ -233,7 +238,7 @@ Still doesn't matter much in this example, but at least you figured out how to u
 
 # Local minima
 
-As we could see when fitting the model with very incorrect starting parameters, sometimes the algorithm doesn't converge on a good estimate. A good choice of starting parameters is therefore also important. For the circle fitting problem, you could say that the average of the x-coordinates that are in the data and the average of the y-coordinates that are in the data, would always avoid a wrong set of starting parameters:
+As you saw when fitting the model with very incorrect starting parameters, sometimes the algorithm doesn't converge on a good estimate. A good choice of starting parameters is therefore also important. For the circle fitting problem, you could say that the average of the x-coordinates that are in the data and the average of the y-coordinates that are in the data, would always avoid a wrong set of starting parameters:
 
 ```{r}
 optim( par = c( 'x'=mean(loccoords$x),
@@ -245,7 +250,7 @@ optim( par = c( 'x'=mean(loccoords$x),
 
 So this means that for some problems, you can usually (or always?) make a reasonable guess as to what the true parameters should be, or at least put them somewhere in the search space, where a search algorithm doesn't get stuck on an incorrect location.
 
-Such incorrect locations are called 'local minima'. The presence of local minima is not always obious or detectable, especially with models where the parameters interact in sometimes unpredictable ways. One way to get out of this is to do a grid search first.
+Such incorrect locations are called 'local minima'. The presence of local minima is not always obvious or detectable, especially with models where the parameters interact in sometimes unpredictable ways. One way to get out of this is to do a _"grid search"_ first.
 
 ## Grid search
 
@@ -254,9 +259,9 @@ In grid search, you evaluate the error function on a set of parameter values tha
 We'll do a simplified example of this here, still using the circle data. It is called _grid_ search, as you're supposed to make a grid of all the combinations of a list of possible parameter values. In this case, we use a few starting positions that are in the range of the data.
 
 ```{r}
-xvalues <- seq(min(miscoords$x),max(miscoords$x),diff(range(miscoords$x))/3) # three values for x
-yvalues <- seq(min(miscoords$y),max(miscoords$y),diff(range(miscoords$y))/3) # three values for y
-searchgrid <- expand.grid('x'=xvalues, 'y'=yvalues) # all 16 combinations
+xvals <- seq(min(miscoords$x),max(miscoords$x),diff(range(miscoords$x))/3) # 4 x-values
+yvals <- seq(min(miscoords$y),max(miscoords$y),diff(range(miscoords$y))/3) # 4 y-values
+searchgrid <- expand.grid('x'=xvals, 'y'=yvals) # all 16 combinations
 kable(searchgrid)
 ```
 
@@ -288,14 +293,14 @@ allfits <- do.call("rbind",
 kable(allfits)
 ```
 
-The second row shows a local minimum, but the first and third row are pretty good (perhaps equally good), and with very similar x and y coordinates. We need to pick the row with the lowest number in the column `value`:
+The second row shows a local minimum, but the first and third row are pretty good (perhaps equally good), and with very similar x and y coordinates. However, we need to pick one, and it makes sense to pick the row with the lowest number in the column `value`:
 
 ```{r}
 winningmodel <- allfits[order(allfits$value)[1],]
 print(winningmodel)
 ```
 
-If there is a tie, you might use the number of function evaluations to break it (lower is better?) but that should be rare. In essence we get the same fitted circle centre as we got several times earlier. Let's see how well that circle works on this data:
+If there is a tie, you might use the number of function evaluations to break it (lower is better?) but that should be rare. In essence we get the same fitted circle centre as we got several times earlier. Let's see how well that circle works on all this data:
 
 ```{r}
 par(mfrow=c(1,2))
@@ -330,7 +335,8 @@ for (dfno in c(1,2)) {
   # plot the centre:
   points(win$x,win$y,col='red')
   # plot a circle of radius 10 around the centre:
-  lines((cos(seq(0,pi/2,(pi/2)/100))*10)+win$x, (sin(seq(0,pi/2,(pi/2)/100))*10)+win$y, col='red')
+  lines( (cos(seq(0,pi/2,(pi/2)/100))*10) + win$x, 
+         (sin(seq(0,pi/2,(pi/2)/100))*10) + win$y, col='red')
   axis(side=1,at=c(0,5,10))
   axis(side=2,at=c(0,5,10))
 }
@@ -344,4 +350,4 @@ You are now ready to implement a more useful model.
 
 # Model quality
 
-Usually, what we will do is test how well one given model explains data from two different conditions or test how well two different models explain the same data. This requires model evaluation, and this is a statistics question, and hopefully, we'll add a tutorial to the statistics section about this soon.
+Usually, what we will do is test how well one given model explains data from two different conditions or test how well two different models explain the same data. This requires model evaluation, and is a statistics question, and hopefully, we'll add a tutorial to the statistics section about this issue at.
