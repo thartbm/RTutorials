@@ -17,3 +17,6 @@ opts_chunk$set(comment='', eval=FALSE)
 
 
 # For-loops
+
+
+# while-loops
