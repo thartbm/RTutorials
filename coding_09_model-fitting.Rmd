@@ -300,7 +300,7 @@ winningmodel <- allfits[order(allfits$value)[1],]
 print(winningmodel)
 ```
 
-If there is a tie, you might use the number of function evaluations to break it (lower is better?) but that should be rare. In essence we get the same fitted circle centre as we got several times earlier. Let's see how well that circle works on all this data:
+If there is a tie, you might use the number of function evaluations to break it (lower is better?) but that should be rare. In essence we get the same fitted circle centre as we got several times earlier. Let's see how well that circle works on all this data, integrating all we have done so far:
 
 ```{r}
 par(mfrow=c(1,2))
@@ -345,9 +345,284 @@ for (dfno in c(1,2)) {
 
 # Two-rate model of visuomotor adaptation
 
-You are now ready to implement a more useful model.
+You are now ready to implement a more interesting model, let's implement a simple version of the two-rate model of motor learning... or of visuomotor adaptation, as the case may be.
 
+First, we need some data, let's load that:
+
+```{r}
+load('data/tworatedata.rda')
+```
+
+In order to fit this model, we need to have one set of reaches, let's see the average or median across the participants. We'll want to make the model flexible, so that it can fit any kind of paradigm. This means we also need to have some way to tell the model what the paradigm is.
+
+Before we can get the reach deviations, we need to baseline the reaches for every participant, by subtracting the median reach deviations from the aligned phase from all reach deviations:
+
+```{r}
+baseline <- function(reachvector,blidx) reachvector - mean(reachvector[blidx], na.rm=TRUE)
+tworatedata[,4:ncol(tworatedata)] <- apply(tworatedata[,4:ncol(tworatedata)], FUN=baseline, MARGIN=c(2), blidx=c(17:32))
+```
+
+Now we'll get the median reach deviations across participants, and plot them.
+
+```{r}
+reaches <- apply(tworatedata[4:ncol(tworatedata)], FUN=median, MARGIN=c(1), na.rm=TRUE)
+plot(reaches,type='p',xlab='trial',ylab='reach deviation [deg]',xlim=c(0,165),ylim=c(-35,35),bty='n',ax=F)
+lines(c(1,33,33,133,133,145,145),c(0,0,30,30,-30,-30,0),col='#AAAAAA')
+lines(c(145,164),c(0,0),col='#AAAAAA',lty=2)
+axis(1,c(1,32,132,144,164),las=2)
+axis(2,c(-30,-15,0,15,30))
+```
+
+OK, so that looks like pretty decent data, with a spontaneous rebound that we can possibly explain with the two-rate model. For this model we will write two separate functions to get the mean squared error. The first needs a schedule and set of parameter values to run the model and calculate the model's reach deviations. The second needs a schedule, a set of parameter values and some actual reach data. It checks the sanity of the parameters, then uses the first function and returns the MSE - or some "large" error value if some of the model's constraints are not met.
+
+## Model function
+
+The function that runs the model, will use a for loop. I'm not sure exactly why, but smart people tell me this can't be solved in one line.
+
+```{r}
+twoRateModel <- function(par, schedule) {
+  
+  # thse values should be zero at the start of the loop:
+  Et <- 0 # previous error: none
+  St <- 0 # state of the slow process: aligned
+  Ft <- 0 # state of the fast process: aligned
+  
+  # we'll store what happens on each trial in these vectors:
+  slow <- c()
+  fast <- c()
+  total <- c()
+  
+  # now we loop through the perturbations in the schedule:
+  for (t in c(1:length(schedule))) {
+    
+    # first we calculate what the model does
+    # this happens before we get visual feedback about potential errors
+    St <- (par['Rs'] * St) - (par['Ls'] * Et)
+    Ft <- (par['Rf'] * Ft) - (par['Lf'] * Et)
+    Xt <- St + Ft
+    
+    # now we calculate what the previous error will be for the next trial:
+    if (is.na(schedule[t])) {
+      Et <- 0
+    } else {
+      Et <- Xt + schedule[t]
+    }
+    
+    # at this point we save the states in our vectors:
+    slow <- c(slow, St)
+    fast <- c(fast, Ft)
+    total <- c(total, Xt)
+    
+  }
+  
+  # after we loop through all trials, we return the model output:
+  return(data.frame(slow,fast,total))
+  
+}
+```
+
+We can play around with this model, by giving it some more or less common parameter values:
+
+```{r}
+par <- c('Ls'=.05, 'Lf'=.15, 'Rs'=.99, 'Rf'=.75)
+schedule <- tworatedata$schedule
+model <- twoRateModel(par=par, schedule=schedule)
+```
+
+That seems to work reasonably well, lets add this to our plot of the data:
+
+```{r}
+plot(reaches,type='l',col='#333333',xlab='trial',ylab='reach deviation [deg]',xlim=c(0,165),ylim=c(-35,35),bty='n',ax=F)
+lines(c(1,33,33,133,133,145,145),c(0,0,30,30,-30,-30,0),col='#AAAAAA')
+lines(c(145,164),c(0,0),col='#AAAAAA',lty=2)
+lines(model$slow,col='blue')
+lines(model$fast,col='red')
+lines(model$total,col='purple')
+axis(1,c(1,32,132,144,164),las=2)
+axis(2,c(-30,-15,0,15,30))
+```
+
+These parameters undershoot the learning in the initial phase, as well as the rebound. How do we find better parameter values? We could play around with the settings until we find some values that work well, but that could take a long time and there is no guarantee that those values would be even close to the best parameters. Instead we want to have the computer do the heavy work, by searching the parameter space in a systematic way.
+
+Now that we have a function that runs the model, we can use that in a function that calculates how wrong the model parameters are. We can calculate the mean of the squared difference between the total model output and the actual reach deviations that we measured. So we will definitely do that.
+
+## Error function [1/2]
+
+This model can be wrong in other ways too. First, all parameters have to be in between 0 and 1 (perhaps they can also be 0 or 1), second, the slow learning rate should be lower than the fast learning rate and third, the slow retention rate should be larger than the fast retention rate. 
+
+```{r}
+twoRateMSE <- function(par, schedule, reaches) {
+  
+  # parameter values should be between 0 and 1:
+  if (any(par > 1)) {
+    return(Inf)
+  }
+  if (any(par < 0)) {
+    return(Inf)
+  }
+  
+  # learning and retention rates of the fast and slow process are constrained:
+  if (par['Ls'] > par['Lf']) {
+    return(Inf)
+  }
+  if (par['Rs'] < par['Rf']) {
+    return(Inf)
+  }
+  
+  return( mean((twoRateModel(par, schedule)$total - reaches)^2, na.rm=TRUE) )
+  
+} 
+```
+
+For the parameters that we just came up with, the MSE would be:
+
+```{r}
+print(twoRateMSE(par, schedule, reaches))
+```
+
+That is on average 5 degrees of on every trial, including the aligned phase. This can be improved!
+
+## First optimization
+
+The strategy from before was to use `optimx()` so let's see if that works:
+
+```{r}
+library(optimx)
+optimx(par = par, 
+       fn = twoRateMSE,
+       schedule = schedule,
+       reaches = reaches)
+```
+
+First of all, BFGS doesn't return anything, and while Nelder-Mead reduces the MSE to 5.2 (so ~2.3 degrees error on every trial), there is a warning about eigenvalue failures and it still takes 277 function evaluations.
+
+## Error function [2/2]
+
+There are some problems with the above function. First, returning `Inf` as a very large error might be too much. Let's change this to 10 times the MSE if the model learned nothing at all. Second, we built in the boundaries in the error function, but we can set them explicitly, at least for some of the fitting methods. Let's try to fix both. First, we change the error function:
+
+```{r}
+twoRateMSE <- function(par, schedule, reaches) {
+  
+  bigError <- mean(schedule^2, na.rm=TRUE) * 10
+  
+  # learning and retention rates of the fast and slow process are constrained:
+  if (par['Ls'] > par['Lf']) {
+    return(bigError)
+  }
+  if (par['Rs'] < par['Rf']) {
+    return(bigError)
+  }
+  
+  return( mean((twoRateModel(par, schedule)$total - reaches)^2, na.rm=TRUE) )
+  
+} 
+```
+
+This is what `optimx()` does with this:
+
+```{r}
+library(optimx)
+optimx(par = par, 
+       fn = twoRateMSE,
+       schedule = schedule,
+       reaches = reaches)
+```
+
+Now both methods work and seem to provide similar model fits. However, we still want to set the upper and lower bounds in our call to `optimx()`:
+
+```{r}
+library(optimx)
+optimx(par = par, 
+       fn = twoRateMSE,
+       lower = c(0,0,0,0),
+       upper = c(1,1,1,1),
+       schedule = schedule,
+       reaches = reaches)
+```
+
+That works, but doesn't seem to change all that much.
+
+## Benchmarking optimization methods
+
+Now for this model it might be more interesting to see how fast each of the methods works:
+
+```{r}
+library(microbenchmark)
+res <- microbenchmark('Nelder-Mead' = optimx( par = par, 
+                                              fn = twoRateMSE, 
+                                              method='Nelder-Mead', 
+                                              schedule = schedule, reaches = reaches),
+                      'BFGS' = optimx( par = par, 
+                                       fn = twoRateMSE, 
+                                       method='BFGS', 
+                                       schedule = schedule, reaches = reaches),
+                      'L-BFGS-B' = optimx( par = par, 
+                                           fn = twoRateMSE, 
+                                           lower = c(0,0,0,0), upper=c(1,1,1,1), # boundaries!
+                                           method='L-BFGS-B', 
+                                           schedule = schedule, reaches = reaches),
+                      times = 20
+               )
+
+print(res)
+
+if (require("ggplot2")) {
+  autoplot(res)
+}
+```
+
+Nelder-Mead might be slightly faster in this case, despite the warning from the author of `optim` that it is quite slow. However, our function now doesn't check boundaries by itself anymore, so we are going to go with `L-BFGS-B` (whatever that stands for).
+
+## Two-rate grid search
+
+At this point, we can run our optimization algorithm of choice on our model so that it fits the data, but there is one possible problem that we still want to take care of: local minima. We'll use the same solution as we had above: grid search!
+
+```{r}
+nvals <- 5
+parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
+
+searchgrid <- expand.grid('Ls'=parvals,
+                          'Lf'=parvals,
+                          'Rs'=parvals,
+                          'Rf'=parvals)
+# evaluate starting positions:
+MSE <- apply(searchgrid, FUN=twoRateMSE, MARGIN=c(1), schedule=schedule, reaches=reaches)
+# run optimx on the best starting positions:
+allfits <- do.call("rbind",
+                   apply( searchgrid[order(MSE)[1:10],],
+                          MARGIN=c(1),
+                          FUN=optimx,
+                          fn=twoRateMSE,
+                          method='L-BFGS-B',
+                          lower=c(0,0,0,0),
+                          upper=c(1,1,1,1),
+                          schedule=schedule,
+                          reaches=reaches ) )
+# pick the best fit:
+win <- allfits[order(allfits$value)[1],]
+print(win)
+```
+
+The MSE `value` is very similar to the one we had before without grid search (5.286). Perhaps this means we didn't need grid search after all, but with this model there is a 4-dimensional parameter space and no obvious way to find where local minima are, so it is better to do grid search.
+
+## Plot model
+
+Let's plot the winning model on top of the data:
+
+```{r}
+model <- twoRateModel(par=unlist(win[,c(1:4)]), schedule=schedule)
+plot(reaches,type='l',col='#333333',xlab='trial',ylab='reach deviation [deg]',xlim=c(0,165),ylim=c(-35,35),bty='n',ax=F)
+lines(c(1,33,33,133,133,145,145),c(0,0,30,30,-30,-30,0),col='#AAAAAA')
+lines(c(145,164),c(0,0),col='#AAAAAA',lty=2)
+lines(model$slow,col='blue')
+lines(model$fast,col='red')
+lines(model$total,col='purple')
+axis(1,c(1,32,132,144,164),las=2)
+axis(2,c(-30,-15,0,15,30))
+```
+
+That _does_ look a lot better than with the parameters we made up.
 
 # Model quality
 
-Usually, what we will do is test how well one given model explains data from two different conditions or test how well two different models explain the same data. This requires model evaluation, and is a statistics question, and hopefully, we'll add a tutorial to the statistics section about this issue at.
+Usually, what we will want to do is test how well one given model explains data from two different conditions or test how well two different models explain the same data. One of the assumptions there is that both model fits are really optimal model fits, so taking all the extra steps described above makes sense. Evaluating the quality of the model fits is a statistics question, so the goal is to add a tutorial to the statistics section about this issue.
