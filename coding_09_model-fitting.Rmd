@@ -5,7 +5,7 @@ output:
   html_document:
     df_print: paged
   pdf_document: default
-author: Jennifer Ruttle
+author: Marius 't Hart
 ---
 
 ```{r setup, cache=FALSE, include=FALSE}
@@ -194,13 +194,7 @@ if (require("ggplot2")) {
 
 It doesn't really look like there is much of a difference between the two methods though.
 
-# Optimization methods
-
-We saw that there different methods to find the optimal parameters. What are the differences between those methods? Why would you pick one over the other? The differences lie in _how_ the methods search the (multi-dimensional) parameter space. In the example we've been using so far, the parameter space is simple: x and y coordinates for a central value. That is, there are 2 parameters that are on the same scale and should be about equally important to the quality of the fit. This probably makes the search thorugh the parameter space fairly straightforward.
-
-[turns out this is more about parameter space and going towards normalizing parameters? this should probably come later]
-
-## `L-BFGS-B` and search boundaries
+# `L-BFGS-B` and search boundaries
 
 Sometimes the model we specify can only accept parameters in a specific range. That is, the model can't be evaluated if the parameters are outside of the range, or perhaps we already know that parameters outside this range don't make sense, even when the model can be fit with them (negative radius of a circle?). Either way, some optimization methods allow restricting the parameter search space, which may result in faster search, or better results. You will investigate one of those here. We will also benchmark this method on the mislocalization data set, as we don't really need it for the other data set anyway.
 
@@ -227,6 +221,7 @@ Still doesn't matter much in this example, but at least you figured out how to u
 
 # Control parameters
 
+Both in calls to `optim()` and `optimx()` you cana specify a set of controls, that fine-tune how the search through the parameter space is done, or the criteria to stop it. Most of the time, the defaults are OK, but here we'll look into a few of the values we can change there.
 
 ## `fnscale`
 
