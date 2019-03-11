@@ -12,3 +12,4 @@ library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
 
+Apart from using if-else statements and for and while loops.

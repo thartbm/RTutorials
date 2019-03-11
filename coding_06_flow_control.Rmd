@@ -5,6 +5,7 @@ output:
   html_document:
     df_print: paged
   pdf_document: default
+author: Marius 't Hart
 ---
 
 ```{r setup, cache=FALSE, include=FALSE}
@@ -12,11 +13,447 @@ library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
 
+This tutorial is on _flow control_, that is, how you can control the flow of code. The thing is, sometimes some piece of code has to be executed, but at other times it doesn't, or maybe it has to be done a different way, depending on something. Or perhaps you want the same bit of code to be executed repeatedly on the same data, or on different parts of your data. There are several flow control mechanisms available to you, and we'll discuss the most common ones here, including one that seems to be unique to R but is really useful.
+
 # If ... else ...
 
+Let's say that you want to greet the user of your scripts appropriately. That is, in the morning, it should say "Good morning!" and for now, it should just say "Good day!" if it is not morning. First we need to determine the current time. We can use the `Sys.time()` function, and convert the output to a named list with numbers.
 
+```{r}
+now <- as.POSIXlt(Sys.time())
+```
+
+The variable `now` is a list with nunmbers, as you can read under _details_ of of the `Sys.time()` help page:
+
+```{r}
+help(Sys.time)
+```
+
+You can read there that the `hour` is given as a digit from 0 to 23, so basically, it is morning when hour is smaller than 12, right?
+
+```{r}
+now[['hour']]
+```
+
+If-else statements need a boolean value, or a statement that is TRUE or FALSE. You can then give it two bits of code, the first one will be executed if the statement evaluates to TRUE, and the second will be executed if the statement evaluates to FALSE. This will look like this:
+
+```
+if (STATEMENT) {
+  # code to be done if STATEMENT is TRUE
+} else {
+  # code to be done if STATEMENT is FALSE
+}
+```
+The simplest form of such boolean statements usually take the form of an equality or inequality check, like this:
+
+```{r}
+# 1 "larger than" 2... this should be FALSE
+1 > 2
+```
+
+You see that the value returned is shown as "FALSE". That is not a string with the 5 letters that make up the word FALSE, but a boolean variable. We didn't discuss them before, but they can be very useful also in your data. They allow to do some logic with R and many other (scripting) languages.
+
+This one is slightly more complicated:
+
+```{r}
+# what do you think this should be?
+(2^3) < (3^2)
+```
+
+Let's write a first `if-else` statement:
+
+```{r}
+if (now[['hour']] < 12) {
+  cat('Good morning!\n')
+} else {
+  cat('Good day!\n')
+}
+```
+
+It works!
+
+What if you don't have any code to do when the statement is FALSE? In that case, you can just skip it altogether. Let's say you're aksing a bunch of people for their length, and there is someone who reported their length in some exotic, useless unit. For that one person you want to convert the unit, but otherwise, you should just do nothing:
+
+```{r}
+personLength <- list('length'=72, 'unit'='inches')
+
+if (personLength$unit == 'inches') {
+  personLength$length <- personLength$length / 2.54
+  personLength$unit <- 'cm'
+}
+
+cat(sprintf('this person is %0.1f %s tall\n',personLength$length, personLength$unit))
+
+```
+
+Of course, unit conversion is hard, so please fix the bug in this code so that it all makes sense.
+
+Notice the double '=' signs: in many languages this indicates an equality check (and not a value assignment, although we use the <- 'gets' operator for that in R). In the example above this was used with strings, but it can be done with numbers too:
+
+```{r}
+1 == 3 - 2
+```
+
+What if you have more than 2 cases? R has made it relatively simple to chain if-statements (for those in the know: no there is no `switch-case` functionality in R, well, kind of, see below). Let's say you sell widgets and you know there are three tax rates for widgets, for different groups of customers:
+
+- 12% for private customers
+- 6% for public customers (government and such)
+
+and
+
+- 0% for customers from abroad (they will pay export/import taxes instead)
+
+We will set the net price of a widget to 10 dollars:
+
+```{r}
+net.price <- 9.99
+```
+
+
+You could nest the if-statements like this:
+
+```{r}
+client <- 'abroad'
+
+if (client == 'private'){
+  tot.price <- net.price * 1.12      # 12% VAT
+} else {
+  if (client == 'public'){
+    tot.price <- net.price * 1.06    # 6% VAT
+  } else {
+    tot.price <- net.price * 1       # 0% VAT
+  }
+}
+
+tot.price
+```
+
+This works, but if you run into a problem with more cases, it will start to become messy. R allows you to simplify this code a little:
+
+```{r}
+client <- 'public'
+
+if (client == 'private'){
+    tot.price <- net.price * 1.12
+} else if (client == 'public'){
+    tot.price <- net.price * 1.06
+} else {
+    tot.price <- net.price
+}
+
+tot.price
+```
+
+Since the only thing we need is really the tax rate, we can use a different kind of code as well, using ifelse assignment operators:
+
+```{r}
+client <- 'private'
+
+VAT <- ifelse(client == 'private', 1.12,
+          ifelse(client == 'public', 1.06, 1)
+       )
+tot.price <- net.price * VAT
+
+tot.price
+```
+
+This can be made somewhat shorter, and in some way more flexible, by using a named list of VAT rates, like this:
+
+```{r}
+client <- 'private'
+
+VATrates <- list('public'=1.12, 'private'=1.06, 'abroad'=1.00)
+VAT <- VATrates[[client]]
+
+tot.price <- net.price * VAT
+
+tot.price
+```
+
+This is more flexible as you can now in principle keep the list of VAT rates separate from the code that calculates the total price. If you don't need this flexibility, you can also use a kind of switch (it's different from switches in other languages):
+
+```{r}
+client <- 'abroad'
+
+VAT <- switch(client, private=1.12, public=1.06, abroad=1)
+tot.price <- net.price * VAT
+
+tot.price
+```
+
+This is shorter code, but it is harder to load the VAT rates from a file and then pick the right one, for example when tax rates changes, you have to change all the code (or at least check it), not just one file with VAT rates.
+
+## element `%in%` list
+
+The kind of checks we can do for if statements is not limited to equality or difference of values. Before moving on to for-loops, you'll get familiar with a few other ways to get a boolean value out of more interesting checks.
+
+First, perhaps we want to see if some variable occurs in a list or vector. For example, you're hosting a party and are programming an AI doorman. There is a guest list, and for every guest you want to check if their name appears in the guest list. Let's first make a guest list:
+
+```{r}
+guestlist <- list('Roger Rabbit', 'Bugs Bunny', 'Elmer Fudd', 'Daffy Duck')
+```
+
+You can add more, or change it if you like.
+
+Now, we set the name of the current guest, and check if they appear in the list of approved guest. If they are on the list, they can enter the party, otherwise, the AI should not let them in.
+
+```{r}
+guest <- 'Daffy Duck'
+
+if (guest %in% guestlist) {
+  cat(sprintf('Right this way please, %s!\n', guest))
+} else {
+  cat(sprintf('You can not enter, %s!\n', guest))
+}
+```
+
+This also works with vectors of numeric values. Let's say we have a list of prime numbers, and we want to check if some variable represents a prime number. We could calculate this, but we can also check our list.
+
+```{r}
+# prime numbers below 100
+primes <- c(2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97)
+```
+
+Now we can check if a given number occurs in the list of primes (fix this chunk):
+
+```{r}
+some_integer <- 37 # your lucky number?
+
+if (some_integer in primes) {
+  cat(sprintf('%d is a prime number below 100\n', some_integer))
+} else {
+  cat(sprintf('%d is not a prime number, higher than 100, or both\n', some_integer))
+}
+```
+
+
+## any
+
+Sometimes, you want to do other checks though. Let's say that students qualify for an assisted studying program if one of their grades is lower than 50%. It doesn't matter how many grades they got, or how many are below 50%, just one is enough.
+
+First we will define some grades for a student:
+
+```{r}
+grades <- c(25,100,99)
+```
+
+This student should qualify, but you can change the values to see what the code below does:
+
+```{r}
+if (any(grades < 50)) {
+  cat('This student qualifies for the assisted studying program.\n')
+} else {
+  cat('This student does not qualify for the assisted studying program.\n')
+}
+```
+
+## all
+
+Conversely, if at the end of the year, the student has passed **all** courses, they can move on to the next year in the program. If not, they should redo some courses. A course is passed if the score is greater than, or equal to 65:
+
+```{r}
+if (all(grades >= 65)) {
+  cat('The student has passed all course.\n')
+} else {
+  cat('The student should retake some course(s).\n')
+}
+```
 
 # For-loops
 
+Using `for-loops`, you can _iterate over_ a list or vector of things, and do some code with each of these in turn. For example, you might want to calculate the reach deviation of each reach trial in a task, or you want to calculate the square of the numbers 1 - 10:
 
-# while-loops
+```{r}
+for (number in c(1:10)) {
+  cat(sprintf('The square of %d is %d.\n',number,number^2))
+}
+```
+
+For a more complicated example, let's say that you want to check the grades of a whole group of students (these are purely imaginary names):
+
+```{r}
+studentgrades <- list( 'Marius'=c(77,12),
+                       'Raphael'=c(100),
+                       'Maria'=c(86,85,87),
+                       'Jennifer'=c(64),
+                       'Shanaa'=c(65,66,66),
+                       'Chad'=c(91),
+                       'Ambika'=c(68,86),
+                       'Denise'=c())
+```
+
+You want to see which ones qualify for the assisted studying program and which ones have passed all their courses.
+
+We will first go through all students using a for loop. The way to do this now, is to first get the names of the named elements in the list:
+
+```{r}
+for (student in names(studentgrades)) {
+  print(student)
+}
+```
+
+We can then use that to extract each student's grades from the list:
+
+```{r}
+for (student in names(studentgrades)) {
+  grades <- studentgrades[[student]]
+  print(student)
+  print(grades)
+}
+```
+
+Now you should create three lists. One for students who pass, one for students who qualify for assisted studying, and one for everybody else, who didn't pass all their courses but will just have to manage on their own.
+
+```{r}
+pass <- c()
+qualify <- c()
+redo <- c()
+```
+
+You will fill these vectors by using some if-statements within a for loop:
+
+```{r}
+for (student in names(studentgrades)) {
+  grades <- studentgrades[[student]]
+  if (all(grades >= 65)) {
+    pass <- append(pass, student)
+  } else if (any(grades > 50)) {
+    qualify <- append(qualify, student)
+  } else (
+    redo <- append(redo, student)
+  )
+}
+
+cat('pass:\n')
+print(pass)
+cat('redo:\n')
+print(redo)
+cat('qualify:\n')
+print(qualify)
+```
+
+This code works, but is not correct: Jennifer does not qualify for assisted studying, but also did not pass all her courses. Fix the chunk.
+
+Also, what should we do with people who didn't do any courses? How could you put them in a separate list? Can you make a fourth list, and put anybody who didn't have any grades into that fourth list in this chunk below:
+
+```{r}
+
+```
+
+
+# While-loops
+
+Let's say we want to see how long it would take 100 dollars to become 1000 dollars or more, if we leave it in the bank with 5% interest. This problem can be solved way simpler, but bear with me. We can use a for loop, to go through a given number of years, and see if the balance is larger than 1000 at the end, and then try again if it is not. But we can also use a `while loop`. This is very similar to a `for-loop` but the loop doesn't end after a given number of iterations; instead keeps running as long as some criterion is met. In the example: we want the balance larger than 1000, so we keep waiting as long as it is smaller than 1000. Beware that logic!
+
+First we set up the balance and the interest rate:
+
+```{r}
+balance <- 100
+interest <- 1.05
+```
+
+Now we can specify the `while loop`.
+
+```{r}
+while (balance < 1000) {
+  
+  balance <- balance * interest
+  
+}
+```
+
+But wait, we have no idea how many years that took... we need to build in some sort of counter to keep track of that:
+
+```{r}
+years <- 0
+
+while (balance < 1000) {
+  balance <- balance * interest
+}
+
+cat(sprintf('after %d years, the balance is: %0.2f dollars\n', years, balance))
+
+```
+
+The above chunk of code has two errors. Fix them so that it shows the number of years it took.
+
+# Apply
+
+R comes with some built in functions that do pretty nifty things, to allow you to rerun a bit of code in structured ways. The family of `lapply()` and `apply()` functions basically runs a loop on parts of the input you provide it and returns the output of the code in the loop in a sensible way.
+
+For example, we can calculate average grades for everybody on our list of student's grades. We should now use `lapply()` as that is `apply()` for lists:
+
+```{r}
+GPA <- lapply(studentgrades,FUN=mean,na.rm=TRUE)
+```
+
+The argument FUN allows you to specify a function that `lapply()` should use for each element in the list or vector you provided. You can then also specify arguments to that function, so in this case, when we calculate a mean, it should ignore NA's (otherwise, if there is only one NA, but the other values are not NAs
+
+This gives some warning, but it did calculate the grade point average for every student correctly, and we get a named list in return:
+
+```{r}
+unlist(GPA)
+```
+
+The warning was for the one student without any grades.
+
+The function `apply()` is meant for arrays, which also means matrices and data frames, and perhaps some other formats as well. Because those pieces of data are multi-dimensional, you now have to specify which dimensions `apply()` should iterate over.
+
+Let's draw a whole bunch of random numbers from the normal distribution, put them in a big matrix, and then see how well the standard deviations matches that of the default normal distribution (it should be close to 1). First we construct this matrix:
+
+```{r}
+nrows <- 10
+ncols <- 50
+normalnumbers <- matrix(rnorm(n=nrows*ncols),nrow=nrows,ncol=ncols)
+```
+
+The matrix `normalnumbers` now has a bunch of samples from the normal distribution and we can evaluate how normal these samples are:
+
+```{r}
+apply(normalnumbers,MARGIN=c(1),FUN=sd)
+```
+
+Can you apply this over columns? Write some code here to do this:
+
+```{r}
+apply( )
+```
+
+Can you think of another function to apply over columns or rows of floating point numbers? Try it out here:
+
+```{r}
+apply( )
+```
+
+You can also define your own functions to be used by apply. In this supposedly normal data, about half the averages should be above 0 (and the other half below). We can test this here, abusing the fact that FALSE and TRUE booleans can be used in math os 0 and 1.
+
+First we define a function that returns if the mean of some input vector is higher than 0 (TRUE) or not (FALSE):
+
+```{r}
+hasMeanAboveZero <- function(x) {
+  return(mean(x, na.rm=TRUE) > 0)
+}
+```
+
+This will actually return FALSE if the mean is exactly zero:
+
+```{r}
+hasMeanAboveZero(c(0,1,2))
+hasMeanAboveZero(c(-1,1))
+```
+
+Now we can apply this function over all the columns of our matrix with normal numbers:
+
+```{r}
+apply(normalnumbers,MARGIN=c(2),FUN=hasMeanAboveZero)
+```
+
+Since fifty percent should be TRUE (mean above zero), and boolean values can be used as 0 (FALSE) and 1 (TRUE), the average of this list of boolean values should be around .50:
+
+```{r}
+mean(apply(normalnumbers,MARGIN=c(2),FUN=hasMeanAboveZero))
+```
+
+You can rerun the chunk that created the matrix to see if you get different numbers.
+
+> This concludes the tutorial on flow control. You should now be able to structure your code so that parts of it are used when appropriate. To do this, you are able to use if-else statements. You can also re-run bits of code several times using for- and while loops, and you can (l)apply functions to a set of elements of a list, vector, matrix or data frame.

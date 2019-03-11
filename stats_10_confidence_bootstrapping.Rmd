@@ -11,3 +11,5 @@ output:
 library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
+
+Common statistics often assume a specific distribution of data, usually some "normal" distribution. The distributions of the data, as represented by the variance, or a standard deviation is then used to determine "significance". 

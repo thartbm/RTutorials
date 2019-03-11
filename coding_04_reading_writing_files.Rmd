@@ -5,6 +5,7 @@ output:
   html_document:
     df_print: paged
   pdf_document: default
+author: Marius 't Hart
 ---
 
 ```{r setup, cache=FALSE, include=FALSE}
