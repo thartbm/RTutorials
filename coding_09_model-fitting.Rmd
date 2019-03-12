@@ -315,7 +315,7 @@ for (dfno in c(1,2)) {
   searchgrid <- expand.grid('x'=seq(min(df$x),max(df$x),diff(range(df$x))/3),
                             'y'=seq(min(df$y),max(df$y),diff(range(df$y))/3)) 
   # evaluate starting positions:
-  MSE <- apply(searchgrid,FUN=circleFitError,MARGIN=c(1),coords=miscoords,radius=10)
+  MSE <- apply(searchgrid,FUN=circleFitError,MARGIN=c(1),coords=df,radius=10)
   # run optimx on the best starting positions:
   allfits <- do.call("rbind",
                    apply( searchgrid[order(MSE)[1:3],],
@@ -337,6 +337,43 @@ for (dfno in c(1,2)) {
 }
 ```
 
+## Local minima
+
+Let's back-track a bit to see why grid search can help us circumvent local minima. First, we'll visualize the grid search for this circle fit. We'll use a slightly denser search grid, and notice that it extends well beyond the previous area. This is to show the overal landscape of fit quality a little better.
+
+```{r}
+searchgrid <- expand.grid('x'=seq(-8,22,1), 'y'=seq(-8,22,1))
+MSE <- apply(searchgrid,FUN=circleFitError,MARGIN=c(1),coords=miscoords,radius=10)
+```
+
+Now we can plot the size of the error over the x,y coordinates of where that error came from as a mesh:
+
+```{r}
+persp(unique(searchgrid$x), unique(searchgrid$y), matrix(sqrt(MSE), ncol=length(unique(searchgrid$x))), phi = 60, theta = 35,
+  xlab = "X-coordinate", ylab = "Y-coordinate", zlab='MSE',
+  main = "searchgrid MSEs", col='#999999', shade=0.7, border='#666666'
+)
+```
+
+Notice how the X and Y axis are directed, as indicate by the arrows (can be hard to see).
+
+You can now see that the MSE doesn't vary randomly throughout the search space. For the most part, there is a valley with an optimal lowest point: the further you get away from the origin, the larger the error. You can also see that if you put the centre of the circle on top of the X,Y coordinates that we have, the errors go up, and that this causes an additional local minimum in the parameter space around (~11,~16).
+
+Here I show the lowest MSEs on top of a simpler landscape:
+
+```{r}
+searchgrid <- expand.grid('x'=seq(-4,18,2), 'y'=seq(-4,18,2))
+MSE <- apply(searchgrid,FUN=circleFitError,MARGIN=c(1),coords=miscoords,radius=10)
+persp(unique(searchgrid$x), unique(searchgrid$y), matrix(sqrt(MSE), ncol=length(unique(searchgrid$x)), byrow=FALSE), phi = 60, theta = 40,
+  xlab = "X-coordinate", ylab = "Y-coordinate", zlab='MSE',
+  main = "searchgrid MSEs", col='#999999', shade=0.7, border='#666666'
+) -> res
+bestidx <- order(MSE)[1:8]
+best <- searchgrid[bestidx,]
+points(trans3d(best20[,1],best20[,2],sqrt(MSE[bestidx]), pmat=res), col='red')
+```
+
+When you start the search through parameter space at that one point at the local minimum, your search will not find the best fit, since any small change in fit parameters from that point will _increase_ the MSE. This 2-dimensional example allows you to see this, but for most optimization problems it isn't so easy to see, as usually there are more parameters.
 
 # Two-rate model of visuomotor adaptation
 
