@@ -351,7 +351,7 @@ Now we can plot the size of the error over the x,y coordinates of where that err
 ```{r}
 persp(unique(searchgrid$x), unique(searchgrid$y), matrix(sqrt(MSE), ncol=length(unique(searchgrid$x))), phi = 60, theta = 35,
   xlab = "X-coordinate", ylab = "Y-coordinate", zlab='MSE',
-  main = "searchgrid MSEs", col='#999999', shade=0.7, border='#666666'
+  main = "searchgrid MSEs", col='#999999', shade=0.7, border=NA
 )
 ```
 
@@ -366,7 +366,7 @@ searchgrid <- expand.grid('x'=seq(-4,18,2), 'y'=seq(-4,18,2))
 MSE <- apply(searchgrid,FUN=circleFitError,MARGIN=c(1),coords=miscoords,radius=10)
 persp(unique(searchgrid$x), unique(searchgrid$y), matrix(sqrt(MSE), ncol=length(unique(searchgrid$x)), byrow=FALSE), phi = 60, theta = 40,
   xlab = "X-coordinate", ylab = "Y-coordinate", zlab='MSE',
-  main = "searchgrid MSEs", col='#999999', shade=0.7, border='#666666'
+  main = "searchgrid MSEs", col='#999999', shade=0.7, border=NA
 ) -> res
 bestidx <- order(MSE)[1:8]
 best <- searchgrid[bestidx,]
@@ -378,6 +378,20 @@ When you start the search through parameter space at that one point at the local
 # Two-rate model of visuomotor adaptation
 
 You are now ready to implement a more interesting model, let's implement a simple version of the two-rate model of motor learning... or of visuomotor adaptation, as the case may be.
+
+As you know, this model assumes that the reach deviation X on a trial t is the sum of the output of a fast process F and a slow process S also on trial t:
+
+$X_t = F_t + S_t$
+
+And each of these processes learn from the error E on the previous trial and retain some of their activity F or S from the previous trial:
+
+$F_t = R_f \cdot F_{t-1} + L_f \cdot E_{t-1}$
+
+and
+
+$S_t = R_s \cdot S_{t-1} + L_s \cdot E_{t-1}$
+
+As is customary, this model is fitted on data where there is an error clamp phase, where errors are set to zero. In those phases, the learning has no effect, as the errors are 0, but the retention factors fully determine the reach output.
 
 First, we need some data, let's load that:
 
