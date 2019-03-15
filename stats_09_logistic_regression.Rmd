@@ -1,0 +1,23 @@
+---
+title: 'Logistic Regression'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  html_notebook: default
+author: Marius 't Hart
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='', eval=FALSE)
+```
+
+Where ANOVA's are based on models that predict continuous variables from categorical variables, and regression predicts one continuous variable from another continuous variable, we can use logistic regression to predict categorical variables from continuous variables. At the same time we can see how well this prediction works, i.e., is a significant part of the variance explained by this logistic regression. In this tutorial you will learn how to do that.
+
+# Logistic Regression
+
+
+
+# Polynomial Logistic Regression
+
