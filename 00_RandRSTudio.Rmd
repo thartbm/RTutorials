@@ -42,10 +42,10 @@ After step 4 you should end up with something like this:
 
 There is a lot to see here, take some time to inspect some of it. The screen is divided into 4 panels or panes:
 
-- **Console**/**Terminal** (left or bottom left): This is the command line interface to R. If you are not using R Studio, you will at least have the Console. All commands can be entered here, so you can test how to run any command here. There is also a system terminal that allows running system command from R Studio.
+- **Console** | **Terminal** (left or bottom left): This is the command line interface to R. If you are not using R Studio, you will at least have the Console. All commands can be entered here, so you can test how to run any command here. There is also a system terminal that allows running system command from R Studio.
 - **Source** (top left): This pane might not be open when first starting R, so don't worry if you don see it. It is a text editor to write scripts. It can have multiple tabs, in the example there is only one, an empty, unsaved file. Notice the 'Run' button that allows you to run part of a script in the Console.
-- **Environment**/**History**/**Connections** (top right): In the Environment tab you can see all the datasets, variables and functions that you loaded or defined. The History tab has a list of all the previous commands you entered in the Console. Notice the 'Import Dataset' button that can be used to load data from several sources. You can open a data frame for inspection from the Environment tab, which actually opens a tab in the Source console. We will not be using the Connections tab, but we might encounter an additional **Git** tab in this pane.
-- **Files**/**Plots**/**Packages**/**Help**/**Viewer** (bottom right): There are several utilities here. The three you will probably use most are: Files, which allows you to look at files and set the working directory (important when working with files, such as the data files for the tutorials); Plots, which has the figures you made of your data, and Help to look up how R packages and function work. We might also install a few packages in the Packages tab.
+- **Environment** | **History** | **Connections** (top right): In the Environment tab you can see all the datasets, variables and functions that you loaded or defined. The History tab has a list of all the previous commands you entered in the Console. Notice the 'Import Dataset' button that can be used to load data from several sources. You can open a data frame for inspection from the Environment tab, which actually opens a tab in the Source console. We will not be using the Connections tab, but we might encounter an additional **Git** tab in this pane.
+- **Files** | **Plots** | **Packages** | **Help** | **Viewer** (bottom right): There are several utilities here. The three you will probably use most are: Files, which allows you to look at files and set the working directory (important when working with files, such as the data files for the tutorials); Plots, which has the figures you made of your data, and Help to look up how R packages and function work. We might also install a few packages in the Packages tab.
 
 # R Introduction
 
@@ -53,13 +53,11 @@ R is both a way to do statistics and a scripting language. In this series of Tut
 
 If you want to get an overview of basics in R, I can recommend the book: "R In A Nutshell," 2^nd^ edition by Joseph Adler. Google this: `pdf r in a nutshell 2nd edition`. Chapter 3 is especially useful for people who have never written any code yet, but Chapters 1-5 are useful for everyone to at least leaf through and then more carefully read the sections that are relevant to you. The rest of the book is a great reference for all your future R work.
 
-Alternatively, you could take the free 'Introduction to R' course on [DataCamp](http://www.datacamp.com). This has you _interactively_ type R commands to complete a set of excercises that introduce you to the basics in R. I just did it the other day and learned some new things myself.
-
 These tutorials have you do similar things, but they focus on what we anticipate people will need when doing our type of research. Also, they will both have you do interactive exercises like DataCamp and they will form a reference for you in the future, like a book.
 
 ## R Notebooks
 
-I will try to create R Notebooks with the necessary R code to do the tutorials. You can view them as HTML files, but you can also open them in R Studio where you can interactively play with the embedded code. This works through "code chunks", that look like this:
+I will try to create R Notebooks with the necessary R code to do the tutorials. You can view this one in a browser, but the others you should open in R Studio where you can interactively play with the embedded code. This works through "code chunks", that look like this:
 
 ![A simple code chunk.](img/codechunk.png)
 
