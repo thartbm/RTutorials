@@ -57,7 +57,7 @@ circleFitError <- function(par, coords, radius){
 ```
 
 
-This function takes three arguments: `par` is a named, numeric vector with an `x` and `y` coordinate of the centre of the circle, `coords`, which is a data frame with and `x` and `y` column of localization positions, and `radius` which is the radius of the circle the data should fall on.
+This function takes three arguments: `par` is a named, numeric vector with an `x` and `y` coordinate of the centre of the circle, `coords`, which is a data frame with an `x` and `y` column of localization positions, and `radius` which is the radius of the circle the data should fall on.
 
 The first argument to these error functions in model fitting always specify parameters that we want to fit. We could also fit the radius of the circle, but it is better to keep your model as simple as possible, and in this case, we know that the radius is not affected by shifting the visual stimulus. The other arguments allow specifying data and other parameters that you don't want to fit.
 
@@ -109,7 +109,7 @@ The error value is larger than it was before fitting and `optim()` returned a lo
 
 So you saw that `optim()` is really nice and easy to use, but we also know that it is considered deprecated. So we _should_ be using better methods. The package `optimx` allows this, as it supercedes many existing optimization packages and even allows you to point to new optimization functions or packages.
 
-There is something to be said for using `optim()` though: it comes with base R. That means that if you use R Markdown notebooks to publish your analyses, it doesn't require to be installed, so it is a good fall-back method. I have not done this consistently yet, but it could be a good idea to test if `optimx` is installed and if it is, your code can use, it and if not, use `optim()` instead.
+There is something to be said for using `optim()` though: it comes with base R. That means that if you use R Markdown notebooks to publish your analyses, it doesn't require to be installed, so it is a good fall-back method. I have not done this consistently yet, but it could be a good idea to test if `optimx` is installed and if it is, your code can use it, and if not, the code can use `optim()` instead.
 
 Run this code to see if `optimx` is installed on your system:
 
@@ -221,7 +221,7 @@ Still doesn't matter much in this example, but at least you figured out how to u
 
 # Control parameters
 
-Both in calls to `optim()` and `optimx()` you cana specify a set of controls, that fine-tune how the search through the parameter space is done, or the criteria to stop it. Most of the time, the defaults are OK, but here we'll look into a few of the values we can change there.
+Both in calls to `optim()` and `optimx()` you can specify a set of controls, that fine-tune how the search through the parameter space is done, or the criteria to stop it. Most of the time, the defaults are OK, but here we'll look into a few of the values we can change there.
 
 ## `fnscale`
 
@@ -357,7 +357,7 @@ persp(unique(searchgrid$x), unique(searchgrid$y), matrix(sqrt(MSE), ncol=length(
 
 Notice how the X and Y axis are directed, as indicate by the arrows (can be hard to see).
 
-You can now see that the MSE doesn't vary randomly throughout the search space. For the most part, there is a valley with an optimal lowest point: the further you get away from the origin, the larger the error. You can also see that if you put the centre of the circle on top of the X,Y coordinates that we have, the errors go up, and that this causes an additional local minimum in the parameter space around (~11,~16).
+You can now see that the MSE doesn't vary randomly throughout the search space. For the most part, there is a valley with an optimal lowest point: the further you get away from this point, the larger the error. There is a little ridge of higher errors, this is where the data is. You can also see that if you put the centre of the circle at a point to the top/right of that ridge, there is a low point too. Whichever way you move from there, the errors go up, and that is the additional local minimum in the parameter space around (~11,~16).
 
 Here I show the lowest MSEs on top of a simpler landscape:
 
@@ -370,7 +370,7 @@ persp(unique(searchgrid$x), unique(searchgrid$y), matrix(sqrt(MSE), ncol=length(
 ) -> res
 bestidx <- order(MSE)[1:8]
 best <- searchgrid[bestidx,]
-points(trans3d(best20[,1],best20[,2],sqrt(MSE[bestidx]), pmat=res), col='red')
+points(trans3d(best[,1],best[,2],sqrt(MSE[bestidx]), pmat=res), col='red')
 ```
 
 When you start the search through parameter space at that one point at the local minimum, your search will not find the best fit, since any small change in fit parameters from that point will _increase_ the MSE. This 2-dimensional example allows you to see this, but for most optimization problems it isn't so easy to see, as usually there are more parameters.
@@ -646,7 +646,7 @@ allfits <- do.call("rbind",
                           reaches=reaches ) )
 # pick the best fit:
 win <- allfits[order(allfits$value)[1],]
-print(win)
+print(win[1:4])
 ```
 
 The MSE `value` is very similar to the one we had before without grid search (5.286). Perhaps this means we didn't need grid search after all, but with this model there is a 4-dimensional parameter space and no obvious way to find where local minima are, so it is better to do grid search.
