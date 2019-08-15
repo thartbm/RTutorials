@@ -53,7 +53,12 @@ R is both a way to do statistics and a scripting language. In this series of Tut
 
 If you want to get an overview of basics in R, I can recommend the book: "R In A Nutshell," 2^nd^ edition by Joseph Adler. Google this: `pdf r in a nutshell 2nd edition`. Chapter 3 is especially useful for people who have never written any code yet, but Chapters 1-5 are useful for everyone to at least leaf through and then more carefully read the sections that are relevant to you. The rest of the book is a great reference for all your future R work.
 
-These tutorials have you do similar things, but they focus on what we anticipate people will need when doing our type of research. Also, they will both have you do interactive exercises like DataCamp and they will form a reference for you in the future, like a book.
+Then there is "R for Data Science" by Hadley Wickham and Garrett Grolemund, which is fully available online: [R for Data Science](https://r4ds.had.co.nz/). A paper copy is on my bookshelf, and you can use it.
+
+Here you can find an R bootcamp that uses videos, while you work with your own software on your own computer:
+[TeamLeada R bootcamp](https://www.teamleada.com/courses/r-bootcamp). I have yet to try it.
+
+These tutorials have you do similar things, but they focus on what we anticipate people will need when doing our type of research. Also, they will _both_ have you do interactive exercises _and_ they will form a reference for you in the future, almost like a book... just one that you co-wrote.
 
 ## R Notebooks
 
