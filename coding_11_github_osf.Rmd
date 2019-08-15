@@ -19,7 +19,45 @@ First make a GitHub project, then an R Studio project.
 
 
 
-In order to directly contribute to someone else's GitHub project, you need to first fork their project. Then also declare the "upstream" repo somewhere, in your local git version of the project. 
+In order to directly contribute to someone else's GitHub project, you need to first fork their project. Then also declare the "upstream" repo somewhere, in your local git version of the project.
+
+When you type:
+
+```{bash}
+git remote -v
+```
+
+Into the R Studio Terminal tab, you should get a list of the branches of your git project. There are usually at least two sources, each on their own line. If you didn't link your repo to an upstream git repo yet, those lines start with 'origin'.
+
+You can then add the upstream repository with this command:
+
+```{bash}
+git remote add upstream https://github.com/ORIGINAL_OWNER/ORIGINAL_REPOSITORY.git
+```
+
+Replace the URL with the actual URL for the upstream repository.
+
+If this command completes successfully, the earlier command `git remote -v` should now also have some lines that start with 'upstream'.
+
+Now git is ready to pull in changes from the upstream repository. First, we get a fresh copy of the upstream repository:
+
+```{bash}
+git fetch upstream
+```
+
+And switch to the local branch (in this case 'master') that we want the upstream changes to be reflected in:
+
+```{bash}
+git checkout master
+```
+
+And then we can merge the upstream master with the local master:
+
+```{bash}
+git merge upstream/master
+```
+
+
 
 How to push merge requests to someone else's GitHub project.
 
