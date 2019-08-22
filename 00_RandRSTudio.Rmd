@@ -55,10 +55,7 @@ If you want to get an overview of basics in R, I can recommend the book: "R In A
 
 Then there is "R for Data Science" by Hadley Wickham and Garrett Grolemund, which is fully available online: [R for Data Science](https://r4ds.had.co.nz/). A paper copy is on my bookshelf, and you can use it.
 
-Here you can find an R bootcamp that uses videos, while you work with your own software on your own computer:
-[TeamLeada R bootcamp](https://www.teamleada.com/courses/r-bootcamp). I have yet to try it.
-
-These tutorials have you do similar things, but they focus on what we anticipate people will need when doing our type of research. Also, they will _both_ have you do interactive exercises _and_ they will form a reference for you in the future, almost like a book... just one that you co-wrote.
+These tutorials show you similar things, but they focus on what we anticipate people will need when doing our type of research. (Although I've never really learned `tidyverse` which might be a better way to get started, but is not really used in these tutorials, sorry!) Also, these tutorials will both have you do interactive exercises and they will form a reference for you in the future, like a book.
 
 ## R Notebooks
 
