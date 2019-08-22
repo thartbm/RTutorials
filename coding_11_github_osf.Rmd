@@ -15,8 +15,14 @@ opts_chunk$set(comment='', eval=FALSE)
 
 # GitHub
 
-First make a GitHub project, then an R Studio project.
+First make a GitHub repository, then an R Studio project with version control.
 
+Making a GitHub project requires a GitHub account and from there you can create a new repository. For  scientific project that will become a (published) paper, I would make it public and give it a GPL 3 license to keep it Open Access in all future forms.
+
+At some point before making an R Studio project that is connected to the GitHub repository, you need to install `git` on your computer. When installing `git` it will want to be associated with a text editor. You should pick one you like, or at least know how to use, because sooner or later you will probably need to use for something that R Studio doesn't (yet) do with some fancy buttons. I like Atom, but you should pick whatever you like.
+
+
+# Version controlled R Studio project
 
 
 In order to directly contribute to someone else's GitHub project, you need to first fork their project. Then also declare the "upstream" repo somewhere, in your local git version of the project.
@@ -56,6 +62,10 @@ And then we can merge the upstream master with the local master:
 ```{bash}
 git merge upstream/master
 ```
+
+If some changes need to be committed first and you run this from command line, git will drop you into it's standard text editor to write the commit message.
+
+By default this is `vim` which works very differently from what you may be used to. In particular, everything works with keyboard shortcuts. In this case, you can simply edit the one line for the commit message, and then press `Esc` and then `:wq` to save the file and exit `vim`.
 
 
 
