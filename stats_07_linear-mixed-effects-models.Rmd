@@ -11,3 +11,47 @@ library(knitr)
 opts_chunk$set(comment='')
 ```
 
+Sometimes you have lots of missing data and no way to impute this easily, but still would like to do an ANOVA. ANOVA's don't handle missing data, but there is an alternative: linear-mixed effects models (LME). First, we'll get some data from our own work, that we analyzed with an LME for publication.
+
+We need some packages to do LME. First, the lme4 packages that actually fits the models, then the lmerTest packages to get some p-values.
+
+```{r}
+library('lme4')
+library('lmerTest')
+```
+
+Do we need this?
+
+```{r}
+default.contrasts <- options('contrasts')
+options(contrasts=c('contr.sum','contr.poly'))
+```
+
+We do need some example data:
+
+```{r}
+exp <- read.csv('data/exposure_localization.csv', stringsAsFactors = FALSE)
+
+# some columns need to be factors:
+exp$participant   <- factor(exp$participant)
+exp$rotated_b     <- factor(exp$rotated_b)
+exp$passive_b     <- factor(exp$passive_b)
+exp$handangle_deg <- factor(exp$handangle_deg)
+
+```
+
+For most analyses in the paper, we did not use the 15 degree point:
+
+```{r}
+remove15 <- FALSE
+if (remove15) {
+  exp <- exp[-which(exp$handangle_deg == 15),]
+}
+```
+
+
+```{r}
+model_lmer <- lme4::lmer(taperror_deg ~ passive_b - (1|participant), na.action=na.exclude, data=exp)
+print(anova(model_lmer,ddf='Satterthwaite',type=3))
+```
+
