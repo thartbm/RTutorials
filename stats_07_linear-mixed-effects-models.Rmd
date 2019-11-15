@@ -16,6 +16,7 @@ Sometimes you have lots of missing data and no way to impute this easily, but st
 We need some packages to do LME. First, the lme4 packages that actually fits the models, then the lmerTest packages to get some p-values.
 
 ```{r}
+#install.packages(c('lme4','lmerTest'))
 library('lme4')
 library('lmerTest')
 ```
@@ -40,7 +41,9 @@ exp$handangle_deg <- factor(exp$handangle_deg)
 
 ```
 
-For most analyses in the paper, we did not use the 15 degree point:
+This is from our paper [Motor Learning Without Moving](https://doi.org/10.1371/journal.pone.0221861) and it's the data used to create Figure 3A.
+
+For most analyses in the paper, we did not use the 15 degree point, as it had perhaps too much missing data. So it might have biased the analyses. In my recollection it didn't change much, but feel free to correct me, by setting `remove15` to `TRUE` here:
 
 ```{r}
 remove15 <- FALSE
@@ -51,7 +54,115 @@ if (remove15) {
 
 
 ```{r}
-model_lmer <- lme4::lmer(taperror_deg ~ passive_b - (1|participant), na.action=na.exclude, data=exp)
-print(anova(model_lmer,ddf='Satterthwaite',type=3))
+exp_model_lmer <- lmerTest::lmer(taperror_deg ~ rotated_b * passive_b * handangle_deg - (1|participant),
+                       na.action = na.exclude,
+                       data = exp,
+                       REML = TRUE,
+                       control = lmerControl(optimizer ="Nelder_Mead")
+                       )
 ```
 
+Here, I've used a simple Nelder-Mead optimizer, because using the standard optimizer gives a warning that the model did not converge (try it).
+
+First, we should look at this model:
+
+```{r}
+summary(exp_model_lmer)
+```
+
+This is pretty cool, but there are terms for the combinations of every level in the factors. So that is not so comparable to the trusty old ANOVA.
+
+LME doesn't give you ANOVA-like output by design. It used to give ANOVA-like output, but it turns out that there is no good 1:1 mapping from LME to ANOVA-like output. There are several methods to do this, but opinions differ on which one is the best, the most appropriate to certain situations, or even which ones are good. So the `lmer` package dropped it. You can however still get that kind of output, using the `lmerTest` package, but as of yet this might not be widely accepted, as in: some reviewers may disagree with using this at all.
+
+The `lmerTest` package uses the "Satterthwaite" method and overwrites the `anova` function:
+
+```{r}
+print(anova(exp_model_lmer,ddf='Satterthwaite',type=3))
+```
+
+Another popular method is "Kenward-Roger" which depends on the `pbkrtest` package:
+
+
+```{r}
+print(anova(exp_model_lmer,ddf='Kenward-Roger',type=3))
+```
+
+The exact numbers are somewhat different, but the general pattern is the same.
+
+As a third method to convert an LME model to ANOVA-like output, we'll try out a Chi-squared method, which doesn't use the `lmer` package (and also doesn't rely on the `lmerTest` package). It uses the `lme()` function from the `nlme` package, and then get's the Chi-squared approximation by using the `Anova()` function from the `car` package.
+
+```{r}
+#install.packages(c(nlme,car))
+library(nlme)
+library(car)
+```
+
+You will see a warning that something from `lme4` is overwritten. This is why you should use namespaces to call functions (use objects) from specific packages.
+
+```{r}
+print(car::Anova(nlme::lme(taperror_deg ~ rotated_b * passive_b * handangle_deg, random = ~1|participant, na.action=na.exclude, data=exp), type=3))
+
+```
+
+Again, this provides the same overall pattern of p-values, even when the exact values are somewhat different.
+
+If you don't want to use the Nelder-Mead optimizer, but want to do something a little more advanced, you can grab some different optimizers from the `optimx` package:
+
+```{r}
+#install.packages(optimx)
+library(optimx)
+```
+
+First, let's see that warning without the Nelder-Mead optimizer:
+
+```{r}
+exp_model_lmer <- lmerTest::lmer(taperror_deg ~ rotated_b * passive_b * handangle_deg - (1|participant),
+                       na.action = na.exclude,
+                       data = exp,
+                       REML = TRUE
+                       )
+```
+
+That sounds scary, but **in this case** it still gives more or less the same output:
+
+```{r}
+print(anova(exp_model_lmer,ddf='Satterthwaite',type=3))
+```
+
+Now, let's use an optimizer from `optimx` to see if that makes a difference:
+
+```{r}
+exp_model_lmer <- lmerTest::lmer(taperror_deg ~ rotated_b * passive_b * handangle_deg - (1|participant),
+                                 na.action = na.exclude,
+                                 data = exp,
+                                 REML = TRUE,
+                                 control = lmerControl(optimizer ='optimx', optCtrl=list(method='L-BFGS-B'))
+)
+```
+
+This gives no warnings.
+
+```{r}
+print(anova(exp_model_lmer,ddf='Satterthwaite',type=3))
+```
+
+And still the same pattern of results.
+
+Now we still need to interpret this... If I'm correct, then using the right contrast options (that I sneakily set in the third chunk) and using type 3 sums of squares, you _can_ interpret main effects in the presence of interactions. You just have to be careful.
+
+Source for that bold statement: [Matt's Stats n stuff](https://mcfromnz.wordpress.com/2011/03/02/anova-type-iiiiii-ss-explained/).
+
+That would mean that providing rotated feedback during exposure training has an effect on hand localization, so does the angle where the hand actually is, and these two factors also interact. However, for this test, I just wanted to say that first thing: does the training with rotated feedback change the hand localizations? If so, we can calculate difference scores and look at the magnitude of that change across other conditions. In the model I wanted to include all sorts of other possible effects, but I can do the model without interactions:
+
+```{r}
+exp_model_lmer <- lmerTest::lmer(taperror_deg ~ rotated_b + passive_b + handangle_deg - (1|participant),
+                                 na.action = na.exclude,
+                                 data = exp,
+                                 REML = TRUE,
+                                 control = lmerControl(optimizer ='optimx', optCtrl=list(method='L-BFGS-B'))
+)
+
+print(anova(exp_model_lmer,ddf='Satterthwaite',type=3))
+```
+
+So I can still draw the same conclusions as before.
