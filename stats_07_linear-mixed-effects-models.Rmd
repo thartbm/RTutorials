@@ -43,7 +43,9 @@ exp$handangle_deg <- factor(exp$handangle_deg)
 
 This is from our paper [Motor Learning Without Moving](https://doi.org/10.1371/journal.pone.0221861) and it's the data used to create Figure 3A.
 
-For most analyses in the paper, we did not use the 15 degree point, as it had perhaps too much missing data. So it might have biased the analyses. In my recollection it didn't change much, but feel free to correct me, by setting `remove15` to `TRUE` here:
+A brief explanation of the data: this is a measurement of where people localize their unseen hand before and after a visuomotor adaptation task. In this case, the trained hand was moved by a robot in such a way that the cursor that represented the hand position would always go straight to the target: there are no motor errors to learn from. Importantly, there is also only 1 target: at 45 degrees. In the rotated session, using the same single target, the cursor did move in a different direction than the hand. Or rather, the hand didn't really move to the target, but the cursor did. The hand moved 30 degrees counter clockwise from the target. This creates a visuo-proprioceptive discrepancy that should recalibrate people's felt hand position, or what we sometime call "proprioception". Here we measure that with what is called "hand localization". So after training, the right hand is moved out, but there is no cursor. Instead, an arc appears, and people use their visible, untrained hand on a touch screen to indicate where they think their right hand is: they localize their right hand. If this localization measure reflects proprioception, it should shift with the training. Interestingly, the movement of the right hand can be done voluntarily (actively) so that people have an efferent-based prediction, as well as their proprioception. Or it can be done passively, so that only proprioception should be available. In this task we don't expect the availability of efferent-based predictions to matter. Since the active movements were in voluntarily chosen directions, and the passive movements went to the exact same spots, we had to estimate the hand localization by some form of interpolation. In this case we used kernel smoothing interpolation. However, not all participants spread out their reaches as much as the others, so there is some missing data. The effects should be larger at the trained target and then fall of on either side. This means that the missing data is hard to impute.
+
+For most analyses in the paper, we did not use the 15 degree point, as it had perhaps too much missing data at exactly that hand angle. This means that a few participants might have biased the analyses. In my recollection it didn't change much, but feel free to correct me, by setting `remove15` to `TRUE` here:
 
 ```{r}
 remove15 <- FALSE
@@ -52,6 +54,55 @@ if (remove15) {
 }
 ```
 
+# ANOVA
+
+This first section could be skipped, it merely shows why using an ANOVA would not be the best use of the data.
+
+Let's see what happens if we do an ANOVA, using the ez package:
+
+```{r}
+#install.packages(ez)
+library(ez)
+ezANOVA(dv=taperror_deg, wid=participant, within=c(rotated_b, passive_b, handangle_deg), data=exp)
+```
+
+That doesn't work at all. Because of the missing values (NAs) in taperror_deg:
+
+```{r}
+length(which(is.na(exp$taperror_deg)))
+```
+
+There are 29 NAs... which is less than 5% of the data. Should be acceptable. We could remove hand angles if one of the instances has a missing value:
+
+
+```{r}
+expPA <- exp[which(!exp$participant %in% unique(exp$participant[which(is.na(exp$taperror_deg))])),]
+ezANOVA(dv=taperror_deg, wid=participant, within=c(rotated_b, passive_b, handangle_deg), data=expPA)
+```
+
+Now we get output! That is great.
+
+```{r}
+dim(exp)[1]-dim(expPA)[1]
+dim(expPA)[1]/dim(exp)[1]
+```
+
+However, even though there were only 29 missing values, we had to remove 196 rows which is one third of the data. So what is that ANOVA really telling us? Maybe we can do better?
+
+Let's remove all the hand angles that have some missing data instead:
+
+```{r}
+expHA <- exp[which(!exp$handangle_deg %in% unique(exp$handangle_deg[which(is.na(exp$taperror_deg))])),]
+
+dim(exp)[1]-dim(expHA)[1]
+dim(expHA)[1]/dim(exp)[1]
+```
+
+That's even more missing data. Close to half. I don't want to loose any of the levels of the other factors. So we should do some other analyses.
+
+# Linear Mixed Effects models
+
+Linear mixed effects models to the rescue!
 
 ```{r}
 exp_model_lmer <- lmerTest::lmer(taperror_deg ~ rotated_b * passive_b * handangle_deg - (1|participant),
@@ -62,7 +113,17 @@ exp_model_lmer <- lmerTest::lmer(taperror_deg ~ rotated_b * passive_b * handangl
                        )
 ```
 
-Here, I've used a simple Nelder-Mead optimizer, because using the standard optimizer gives a warning that the model did not converge (try it).
+In LMEs there are two types of `effects`: fixed effects (which are usually the factors you'd be interested in in an ANOVA) and random effects (which you'd usually not care about much - but this may depend on your question and data). In this case the "formula" is:
+
+`taperror_deg ~ rotated_b * passive_b * handangle_deg - (1|participant)`
+
+- `taperror_deg` is the dependent variable, that the model should explain
+- `rotated_b * passive_b * handangle_deg` are the fixed effects and the `*` tells the `lmer()` function that we want all combinations of their levels: these factors may interact 
+- `(1|participant)` says that participant is a random effect: we get intercept levels for each, but they don't interact with the fixed effects, this is akin (but not the same) as doing a repeated-measures ANOVA
+
+We also tell the function what data frame to use, to exclude NA's, and to use REML (not ML).
+
+Finally, I've used a simple Nelder-Mead optimizer, because using the standard optimizer gives a warning that the model did not converge (try it).
 
 First, we should look at this model:
 
