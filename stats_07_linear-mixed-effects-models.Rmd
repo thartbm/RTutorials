@@ -2,6 +2,8 @@
 title: "Linear Mixed Effects Models"
 author: "Marius 't Hart"
 output:
+  html_document:
+    df_print: paged
   html_notebook: default
   html_document:
     df_print: paged
