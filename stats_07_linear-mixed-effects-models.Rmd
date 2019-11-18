@@ -1,9 +1,11 @@
 ---
-title: 'Linear Mixed Effects Models'
+title: "Linear Mixed Effects Models"
+author: "Marius 't Hart"
 output:
+  html_document:
+    df_print: paged
   html_notebook: default
   pdf_document: default
-author: Marius 't Hart
 ---
 
 ```{r setup, cache=FALSE, include=FALSE}
@@ -50,17 +52,16 @@ str(exp)
 
 A brief explanation of the data: this is a measurement of where people (mis)localize their unseen hand before and after a visuomotor adaptation task (the data in the `taperror_deg` column). In this case, the trained hand was moved by a robot in such a way that the cursor that representing the hand position would always go straight to the target: there are no motor errors to learn from. Importantly, there is also only 1 target: at 45 degrees. In the rotated session, using the same single target, the cursor did move in a different direction than the hand. Or rather, the hand didn't really move to the target, but the cursor did. The hand moved 30 degrees counter clockwise from the target. This creates a visuo-proprioceptive discrepancy that should recalibrate people's felt hand position, or what we sometime call "proprioception". Here we measure that with what is called "hand localization". So after training, the right hand is moved out, but there is no cursor. Instead, an arc appears, and people use their visible, untrained hand on a touch screen to indicate where they think their right hand is: they localize their right hand. If this localization measure reflects proprioception, it should shift with the training (we code whether the measure was done after rotated training or not in the `rotated_b` column). Interestingly, the movement of the right hand in the localization task (not the training) can be done voluntarily (actively) so that people have an efferent-based prediction, as well as their proprioception. Or it can be done passively, so that only proprioception should be available (the `passive_b` column). In this task we don't expect the availability of efferent-based predictions to matter. Since the active movements were in voluntarily chosen directions, and the passive movements went to the exact same spots, we had to estimate the hand localization at a set of actual hand locations (the `handangle_deg` column) by some form of interpolation. In this case we used kernel smoothing interpolation. However, not all participants (the `participant` column) spread out their reaches as much as the others, so there is some missing data. The effects should be larger at the trained target and then fall of on either side. This means that the missing data is hard to impute or extrapolate.
 
-For most analyses in the paper, we did not use the 15 degree point, as it had perhaps too much missing data at exactly that hand angle. This means that a few participants might have biased the analyses. In my recollection it didn't change much, but feel free to correct me, by setting `remove15` to `TRUE` here:
+For most analyses in the paper, we did not use the 15 degree point, as it had perhaps too much missing data at exactly that hand angle. This means that a few participants might have biased the analyses, so that way we avoided that impression. Maybe that was a bad choice, but it's what we did.
 
-```{r}
-remove15 <- FALSE
-if (remove15) {
-  exp <- exp[-which(exp$handangle_deg == 15),]
-}
+There should probably be a figure here, showing the data.
+
+```{r fig.width=7.5, fig.height=3}
+source('R/exposureLocalization.R')
+plotExposureLocalization(target='inline', remove15=FALSE)
 ```
 
-
-
+So it looks like the manipulation had an effect: after rotated exposure training, the localization is shifted relative to after aligned training. I'm not really sure there is a difference between the localization shifts in active and passive. But... the first step is to verify statistically that the training had an effect. That's _"all"_ that will be done in this tutorial.
 
 # ANOVA
 
@@ -68,7 +69,7 @@ This first section could be skipped, it merely shows why using an ANOVA would no
 
 Let's see what happens if we do an ANOVA, using the ez package:
 
-```{r}
+```{r error=TRUE}
 #install.packages('ez')
 library(ez)
 ezANOVA(dv=taperror_deg, wid=participant, within=c(rotated_b, passive_b, handangle_deg), data=exp)
@@ -80,7 +81,7 @@ That doesn't work at all. Because of the missing values (NAs) in taperror_deg:
 length(which(is.na(exp$taperror_deg)))
 ```
 
-There are 29 NAs... which is less than 5% of the data. Should be acceptable. We could remove hand angles if one of the instances has a missing value:
+There are 29 NAs... which is less than 5% of the data. Should be acceptable. We could remove participants if one of their data points is a missing value:
 
 ```{r}
 expPA <- exp[which(!exp$participant %in% unique(exp$participant[which(is.na(exp$taperror_deg))])),]
@@ -90,8 +91,11 @@ ezANOVA(dv=taperror_deg, wid=participant, within=c(rotated_b, passive_b, handang
 Now we get output! That is great.
 
 ```{r}
-dim(exp)[1] - dim(expPA)[1] - length(which(is.na(exp$taperror_deg)))
-dim(expPA)[1]/(dim(exp)[1] - length(which(is.na(exp$taperror_deg))))
+cat(sprintf('Removed %d rows, or %0.2f%% of the data.\n',
+            dim(exp)[1] - dim(expPA)[1] - length(which(is.na(exp$taperror_deg))),
+            100 - (dim(expPA)[1]/(dim(exp)[1] - length(which(is.na(exp$taperror_deg))))) * 100
+            )
+    )
 ```
 
 However, even though there were only 29 missing values, we had to remove 167 additional rows which is about 30% of the data. So what is that ANOVA really telling us? Maybe we can do better?
@@ -101,15 +105,50 @@ Let's remove all the hand angles that have some missing data instead:
 ```{r}
 expHA <- exp[which(!exp$handangle_deg %in% unique(exp$handangle_deg[which(is.na(exp$taperror_deg))])),]
 
-dim(exp)[1] - dim(expHA)[1] - length(which(is.na(exp$taperror_deg)))
-dim(expHA)[1] / (dim(exp)[1] - length(which(is.na(exp$taperror_deg))))
+cat(sprintf('Removed %d rows, or %0.2f%% of the data.\n',
+            dim(exp)[1] - dim(expHA)[1] - length(which(is.na(exp$taperror_deg))),
+            100 - (dim(expHA)[1] / (dim(exp)[1] - length(which(is.na(exp$taperror_deg))))) * 100
+            )
+   )
 ```
 
-That's even more data that gets remove: about 40%. I don't want to loose any of the levels of the other factors. So we should probably do some other analyses.
+That's even more data that gets remove: about 40%. The data is not missing at random, it's because we can't really extrapolate from the present data, so that there are only data points missing at 15, 25 and 35 degrees. Maybe we should remove the most egregious hand angle (15 degrees) as we did for some analyses in the paper, and then check which participants still have missing data. Perhaps then we won't have to remove so much data?
+
+```{r}
+expH <- exp[-which(exp$handangle_deg == 15),]
+expHP <- expH[which(!expH$participant %in% unique(expH$participant[which(is.na(expH$taperror_deg))])),]
+
+cat(sprintf('Removed %d rows, or %0.2f%% of the data.\n',
+            dim(exp)[1] - dim(expHP)[1] - length(which(is.na(exp$taperror_deg))),
+            100 - (dim(expHP)[1] / (dim(exp)[1] - length(which(is.na(exp$taperror_deg))))) * 100
+            )
+   )
+```
+
+That's the least amount of data removed. Here is the ANOVA:
+
+```{r}
+ezANOVA(dv=taperror_deg, wid=participant, within=c(rotated_b, passive_b, handangle_deg), data=expHP)
+```
+
+Some might think that is acceptable, but it does add up to over 1/5th of the data. And that's not random missing data: it's 1 of 7 hand angles and 3 of 21 participants that no longer contribute any data. Not super-kosher...
+
+I don't want to loose any of the levels of the other factors. So we should probably do some other analysis.
 
 # Linear Mixed Effects models
 
 Linear mixed effects models to the rescue!
+
+First, if you want to reproduce the analyses that were published, you should set `remove15` to `TRUE` in the following chunk:
+
+```{r}
+remove15 <- FALSE
+if (remove15) {
+  exp <- exp[-which(exp$handangle_deg == 15),]
+}
+```
+
+So let's fit the linear mixed effects model:
 
 ```{r}
 exp_model_lmer <- lmerTest::lmer(taperror_deg ~ rotated_b * passive_b * handangle_deg - (1|participant),
@@ -144,13 +183,13 @@ summary(exp_model_lmer)
 plot(exp_model_lmer)
 ```
 
-In this case there might be some systematic errors in the model, as in; the fixed effects (predictor / factors) don't fully explain the data, but by and large it seems to work reasonably well. Better than no model.
+In this case there might be some systematic errors in the model, as the residuals seem close to zero around 0 and around -8, but in between they might be a tiny bit higher. I won't check this here, but it would mean that the fixed effects (predictor / factors) don't fully explain the data, maybe there is some additional effect going on, or we should put the data on some other scale. However, by and large it seems to work reasonably well. Much better than no model.
 
 This is pretty cool, but there are terms for the combinations of every level in the factors. Maybe this provides a lot more information, but it's not so comparable to the trusty, old ANOVA.
 
 LME doesn't give you ANOVA-like output by design. The `lmer` package used to give ANOVA-like output, but it turns out that there is no good 1:1 mapping from LME to ANOVA-like output. There are still several methods to approximate it, but opinions differ on which one is the best, the most appropriate to certain situations, or even which ones are good. So the `lmer` package dropped it. You can however still get that kind of output, using the `lmerTest` package, but as of yet this might not be widely accepted, as in: some reviewers may disagree with using this at all.
 
-The `lmerTest` package uses the "Satterthwaite" method and overwrites the `anova` function:
+The `lmerTest` package allows using the "Satterthwaite" method and overwrites the `anova` function:
 
 ```{r}
 print(anova(exp_model_lmer,ddf='Satterthwaite',type=3))
