@@ -15,7 +15,7 @@ opts_chunk$set(comment='')
 
 Sometimes you have lots of missing data and no way to impute this easily, but still would like to do an ANOVA. ANOVA's don't handle missing data, but there is an alternative: linear-mixed effects models (LME). First, we'll get some data from our own work, that we analyzed with an LME for publication.
 
-We need some packages to do LME. First, the lme4 packages that actually fits the models, then the lmerTest packages to get some p-values.
+We need some packages to do LME. The `lme4` package actually fits the models, and the `lmerTest` package gets some p-values.
 
 ```{r}
 #install.packages(c('lme4','lmerTest'))
@@ -23,14 +23,14 @@ library('lme4')
 library('lmerTest')
 ```
 
-Do we need this?
+Do we need this? Yes. Yes, we do.
 
 ```{r}
 default.contrasts <- options('contrasts')
 options(contrasts=c('contr.sum','contr.poly'))
 ```
 
-We do need some example data:
+We also need some example data:
 
 ```{r}
 exp <- read.csv('data/exposure_localization.csv', stringsAsFactors = FALSE)
@@ -43,16 +43,17 @@ exp$handangle_deg <- factor(exp$handangle_deg)
 
 ```
 
-This is from our paper [Motor Learning Without Moving](https://doi.org/10.1371/journal.pone.0221861) and it's the data used to create Figure 3A. So what's in the data set?
+This is from our paper [Motor Learning Without Moving](https://doi.org/10.1371/journal.pone.0221861) and it's the data used to create Fig 3A. So what's in the data set?
 
 ```{r}
 str(exp)
 ```
 
+So it's a data frame with 6 columns and 588 rows. The `group` column is not so meaningful, as I'm only using this one group for this notebook. What else?
 
 A brief explanation of the data: this is a measurement of where people (mis)localize their unseen hand before and after a visuomotor adaptation task (the data in the `taperror_deg` column). In this case, the trained hand was moved by a robot in such a way that the cursor that representing the hand position would always go straight to the target: there are no motor errors to learn from. Importantly, there is also only 1 target: at 45 degrees. In the rotated session, using the same single target, the cursor did move in a different direction than the hand. Or rather, the hand didn't really move to the target, but the cursor did. The hand moved 30 degrees counter clockwise from the target. This creates a visuo-proprioceptive discrepancy that should recalibrate people's felt hand position, or what we sometime call "proprioception". Here we measure that with what is called "hand localization". So after training, the right hand is moved out, but there is no cursor. Instead, an arc appears, and people use their visible, untrained hand on a touch screen to indicate where they think their right hand is: they localize their right hand. If this localization measure reflects proprioception, it should shift with the training (we code whether the measure was done after rotated training or not in the `rotated_b` column). Interestingly, the movement of the right hand in the localization task (not the training) can be done voluntarily (actively) so that people have an efferent-based prediction, as well as their proprioception. Or it can be done passively, so that only proprioception should be available (the `passive_b` column). In this task we don't expect the availability of efferent-based predictions to matter. Since the active movements were in voluntarily chosen directions, and the passive movements went to the exact same spots, we had to estimate the hand localization at a set of actual hand locations (the `handangle_deg` column) by some form of interpolation. In this case we used kernel smoothing interpolation. However, not all participants (the `participant` column) spread out their reaches as much as the others, so there is some missing data. The effects should be larger at the trained target and then fall of on either side. This means that the missing data is hard to impute or extrapolate.
 
-For most analyses in the paper, we did not use the 15 degree point, as it had perhaps too much missing data at exactly that hand angle. This means that a few participants might have biased the analyses, so that way we avoided that impression. Maybe that was a bad choice, but it's what we did.
+For most analyses in the paper, we did not use the 15 degree point, as it had perhaps too much missing data so that a few participants might have biased the analyses. Maybe that was a bad choice, but it's what we did.
 
 There should probably be a figure here, showing the data.
 
@@ -65,9 +66,9 @@ So it looks like the manipulation had an effect: after rotated exposure training
 
 # ANOVA
 
-This first section could be skipped, it merely shows why using an ANOVA would not be the best use of the data.
+You could skip this first section, as it merely shows why using an ANOVA would not be the best use of the data.
 
-Let's see what happens if we do an ANOVA, using the ez package:
+Let's see what happens if we _do_ do an ANOVA, using the ez package:
 
 ```{r error=TRUE}
 #install.packages('ez')
@@ -112,7 +113,7 @@ cat(sprintf('Removed %d rows, or %0.2f%% of the data.\n',
    )
 ```
 
-That's even more data that gets remove: about 40%. The data is not missing at random, it's because we can't really extrapolate from the present data, so that there are only data points missing at 15, 25 and 35 degrees. Maybe we should remove the most egregious hand angle (15 degrees) as we did for some analyses in the paper, and then check which participants still have missing data. Perhaps then we won't have to remove so much data?
+That's even more data that gets remove: about 40%. Hmmm. Those NA's are not missing at random, it's because we can't really extrapolate from the present data. Also, there are only data points missing at 15, 25 and 35 degrees. Maybe we should remove the most egregious hand angle (15 degrees) as we did for some analyses in the paper, and then check which participants still have missing data. Perhaps then we won't have to remove so much data?
 
 ```{r}
 expH <- exp[-which(exp$handangle_deg == 15),]
@@ -131,15 +132,15 @@ That's the least amount of data removed. Here is the ANOVA:
 ezANOVA(dv=taperror_deg, wid=participant, within=c(rotated_b, passive_b, handangle_deg), data=expHP)
 ```
 
-Some might think that is acceptable, but it does add up to over 1/5th of the data. And that's not random missing data: it's 1 of 7 hand angles and 3 of 21 participants that no longer contribute any data. Not super-kosher...
+Some might think that is acceptable, but it does add up to over 1/5th of the good data that had to be removed. And this might skew our results: it's 1 of 7 hand angles and 3 of 21 participants that no longer contribute any data at all. Not super-kosher...
 
-I don't want to loose any of the levels of the other factors. So we should probably do some other analysis.
+So we should probably do some other analysis.
 
 # Linear Mixed Effects models
 
 Linear mixed effects models to the rescue!
 
-First, if you want to reproduce the analyses that were published, you should set `remove15` to `TRUE` in the following chunk:
+First, if you want to exactly reproduce the analysis that was published, you should set `remove15` to `TRUE` in the following chunk, but it works fine with all the data as well:
 
 ```{r}
 remove15 <- FALSE
@@ -148,7 +149,7 @@ if (remove15) {
 }
 ```
 
-So let's fit the linear mixed effects model:
+Let's fit the linear mixed effects model:
 
 ```{r}
 exp_model_lmer <- lmerTest::lmer(taperror_deg ~ rotated_b * passive_b * handangle_deg - (1|participant),
@@ -167,7 +168,7 @@ In LMEs there are two types of `effects`: fixed effects (which are usually the f
 
 - `taperror_deg` is the dependent variable, that the model should explain
 - `rotated_b * passive_b * handangle_deg` are the fixed effects and the `*` tells the `lmer()` function that we want all combinations of their levels: these factors may interact 
-- `(1|participant)` says that participant is a random effect: we get intercept levels for each, but they don't interact with the fixed effects, this is akin to (but not the same as) as doing a repeated-measures ANOVA
+- `(1|participant)` says that participant is a random effect: we get (intercept) coefficients for each, but they don't interact with the fixed effects, this is akin to (but not the same as) doing a repeated-measures ANOVA
 
 We also tell the function what data frame to use, to exclude NA's, and to use REML (not ML: maximum-likelihood).
 
@@ -179,17 +180,19 @@ First, we should probably look at this model:
 summary(exp_model_lmer)
 ```
 
+And it's residuals:
+
 ```{r}
 plot(exp_model_lmer)
 ```
 
-In this case there might be some systematic errors in the model, as the residuals seem close to zero around 0 and around -8, but in between they might be a tiny bit higher. I won't check this here, but it would mean that the fixed effects (predictor / factors) don't fully explain the data, maybe there is some additional effect going on, or we should put the data on some other scale. However, by and large it seems to work reasonably well. Much better than no model.
+In this case there might be some systematic errors in the model, as the residuals seem close to zero around 0 and around -8, but in between they might be a tiny bit higher. I won't check this here, but it would mean that the fixed effects (predictors / factors) don't fully explain the data, maybe there is some additional effect going on, or we should put the data on some other scale. However, by and large it seems to work reasonably well. Much better than no model.
 
 This is pretty cool, but there are terms for the combinations of every level in the factors. Maybe this provides a lot more information, but it's not so comparable to the trusty, old ANOVA.
 
-LME doesn't give you ANOVA-like output by design. The `lmer` package used to give ANOVA-like output, but it turns out that there is no good 1:1 mapping from LME to ANOVA-like output. There are still several methods to approximate it, but opinions differ on which one is the best, the most appropriate to certain situations, or even which ones are good. So the `lmer` package dropped it. You can however still get that kind of output, using the `lmerTest` package, but as of yet this might not be widely accepted, as in: some reviewers may disagree with using this at all.
+LME doesn't give you ANOVA-like output by design. The `lme4` package used to give ANOVA-like output, but it turns out that there is no good 1:1 mapping from LME to ANOVA-like output. There are several methods to approximate it, but opinions differ on which one is the best, the most appropriate to certain situations, or even which ones are good. So the `lme4` package dropped it. You can however still get that kind of output, using the `lmerTest` package, but as of yet this might not be widely accepted, as in: some reviewers may disagree with using this at all.
 
-The `lmerTest` package allows using the "Satterthwaite" method and overwrites the `anova` function:
+The `lmerTest` package allows using the "Satterthwaite" method and overwrites (or extends?) the `anova()` function:
 
 ```{r}
 print(anova(exp_model_lmer,ddf='Satterthwaite',type=3))
@@ -204,7 +207,7 @@ print(anova(exp_model_lmer,ddf='Kenward-Roger',type=3))
 
 The exact numbers are slightly different, but the general pattern is the same.
 
-As a third method to convert an LME model to ANOVA-like output, we'll try out a Chi-squared method, which doesn't use the `lmer` package (and also doesn't rely on the `lmerTest` package). It uses the `lme()` function from the `nlme` package, and then get's the Chi-squared approximation by using the `Anova()` function from the `car` package.
+As a third method to convert an LME model to ANOVA-like output, we'll try out a Chi-squared method, which doesn't use the `lme4` and `lmerTest` package. It uses the `lme()` function from the `nlme` package, and then get's the Chi-squared approximation by using the `Anova()` function from the `car` package.
 
 ```{r}
 #install.packages(c('nlme','car'))
@@ -212,7 +215,7 @@ library(nlme)
 library(car)
 ```
 
-You will see a warning that something from `lme4` is overwritten. This is why you should use namespaces to call functions (use objects) from specific packages.
+You will see a warning that something from `lme4` is overwritten. This is why you should use namespaces.
 
 ```{r}
 print(car::Anova(nlme::lme(taperror_deg ~ rotated_b * passive_b * handangle_deg, random = ~1|participant, na.action=na.exclude, data=exp), type=3))
@@ -221,7 +224,7 @@ print(car::Anova(nlme::lme(taperror_deg ~ rotated_b * passive_b * handangle_deg,
 
 Again, this provides the same overall pattern of p-values, even when the exact values are somewhat different.
 
-If you don't want to use the Nelder-Mead optimizer, but want to do something a little more advanced, you can grab some different optimizers from the `optimx` package:
+Back to `lme4`. If you don't want to use the Nelder-Mead optimizer, but want to do something a little more advanced, you can grab some different optimizers from the `optimx` package:
 
 ```{r}
 #install.packages('optimx')
@@ -269,7 +272,7 @@ Now we still need to interpret this... If I'm correct, then using the right cont
 
 Source for that bold statement: [Matt's Stats n stuff](https://mcfromnz.wordpress.com/2011/03/02/anova-type-iiiiii-ss-explained/).
 
-That would mean that providing rotated feedback during exposure training has an effect on hand localization, so does the angle where the hand actually is, and these two factors also interact. However, for this test, I just wanted to say that first thing: does the training with rotated feedback change the hand localizations? For this data, I don't actually care if that happens at all hand positions or in both tasks, as long as it changes at some hand angle (preferably close to the trained target, and more so for the active localization instead of the passive). If it happens at all, we can then calculate difference scores (localization after rotated exposure - localization before rotated exposure, for all hand angles and active and passive localization) and then look at the _magnitude_ of that change across other conditions. In the model I wanted to include all sorts of other possible effects, but I can do the model without interactions:
+That would mean that providing rotated feedback during exposure training has an effect on hand localization, so does the angle where the hand actually is, and these two factors also interact. However, for this test, I just wanted to say that first thing: does the training with rotated feedback change the hand localizations? For this data, I don't actually care if that happens at all hand positions or in both tasks, as long as it changes at some hand angle (preferably close to the trained target, and more so for the active localization instead of the passive). If it happens at all, we can then calculate difference scores (localization after rotated exposure - localization before rotated exposure, for all hand angles and active and passive localization) and then look at the _magnitude_ of that change across the conditions. In the model I wanted to include all sorts of other possible effects, but I can do the model without interactions:
 
 ```{r}
 exp_model_lmer <- lmerTest::lmer(taperror_deg ~ rotated_b + passive_b + handangle_deg - (1|participant),
@@ -283,3 +286,5 @@ print(anova(exp_model_lmer,ddf='Satterthwaite',type=3))
 ```
 
 Can I still draw the same conclusions as before, now that there are main effects without an interaction? Maybe not, as these main effects might be an artefact of the simpler model.
+
+However, given all the tests done here, I'm pretty sure that exposure training did have an effect on localization responses. That means I can continue looking at the size of that effect in other analyses, but this is where the tutorial stops.
