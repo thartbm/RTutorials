@@ -12,20 +12,35 @@ library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
 
+_GitHub_
+
+There are several advantages to using GitHub (or another Git service or versioning system) as well as the Open Science Framework. GitHub first functions as a backup of all your code: you can go back in time to any point you "saved". It also allows easier sharing of code with others, as they can simply check out your GitHub repository. You can create branches to work on improving separate parts of your code, and you can receive pull requests from external people who've tried to make their own improvements. But even when you're just working on code on your own, using GitHub is beneficial.
+
+_The Open Science Framework_
+
+The Open Science Framework (osf.io) started mainly as a repository for data, but can do much more now. It can be integrated with GitHub, it has pre-print servers, and OSF repositories can be registered to get their own DOI, and become cite-able units.
+
+_Working with GitHub and the Open Science Framework_
+
+In this notebook, I'll describe the basics of how to use GitHub from within R Studio, and how to integrate this with an OSF repository. The main idea is to use GitHub for code and development, and OSF as a data repository as well as the main public access point for your science project.
 
 # GitHub
 
-First make a GitHub repository, then an R Studio project with version control.
+Start by making a GitHub repository, then an R Studio project with version control.
 
-Making a GitHub project requires a GitHub account and from there you can create a new repository. For  scientific project that will become a (published) paper, I would make it public and give it a GPL 3 license to keep it Open Access in all future forms.
+Making a GitHub project requires a GitHub account and from there you can create a new repository. The name of your repository should be memorable (descriptive) but still fairly short, as this will show up in lists of repositories / projects. I'd avoid spaces in repo names, as the GitHub repo name will also become a folder on your computer, and spaces in folder names are still not great. I keep all my GitHub repositories publis, but especially for a scientific project that will become a (published) paper, I would make it public and give it a GPL 3 license to keep it Open Access in all future forms.
 
-At some point before making an R Studio project that is connected to the GitHub repository, you need to install `git` on your computer. When installing `git` it will want to be associated with a text editor. You should pick one you like, or at least know how to use, because sooner or later you will probably need to use for something that R Studio doesn't (yet) do with some fancy buttons. I like Atom, but you should pick whatever you like.
-
+At some point before making an R Studio project that is connected to the GitHub repository, you need to install `git` on your computer. When installing `git` it will want to be associated with a text editor. You should pick one you like, or at least know how to use, because sooner or later you will probably need to use for something that R Studio doesn't (yet) do with some fancy buttons. I like Atom, which was made by the people from GitHub, but you should pick whatever you like (as long as it isn't vim).
 
 # Version controlled R Studio project
 
+This part assumes you're already familiar with R Studio Projects. By themselves, R Studio Projects already save you a lot of trouble, and this is compounded by basing your R Studio Project on a GitHub repo. This is why you first make a GitHub repo, and then a project.
 
-In order to directly contribute to someone else's GitHub project, you need to first fork their project. Then also declare the "upstream" repo somewhere, in your local git version of the project.
+
+
+# Contributing to another Git repo
+
+In order to directly contribute to someone else's GitHub project, you need to first fork their project. This creates a full copy of the project on your GitHub account. Any project should have a fork button on it, but you can only see/use this when you're logged into your account. Then also declare the "upstream" repo somewhere, in your local git version of the project.
 
 When you type:
 
