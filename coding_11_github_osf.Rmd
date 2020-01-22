@@ -12,9 +12,17 @@ library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
 
+This tutorial doesn't really have any editable code chunks, as it explains how to use tools to manage your scientific projects using R and R Studio. We start with a short explanation of what GitHub and the Open Science Framework are for, and how they can interact, so you can get a sense for the big picture. Details will then have proper context..
+
 _GitHub_
 
-There are several advantages to using GitHub (or another Git service or versioning system) as well as the Open Science Framework. GitHub first functions as a backup of all your code: you can go back in time to any point you "saved". It also allows easier sharing of code with others, as they can simply check out your GitHub repository. You can create branches to work on improving separate parts of your code, and you can receive pull requests from external people who've tried to make their own improvements. But even when you're just working on code on your own, using GitHub is beneficial.
+There are several advantages to using GitHub -- or another Git service or versioning system. GitHub first functions as a backup of all your code: you can go back in time to any point you "saved". It also allows easier sharing of code with others, as people can simply check out your GitHub repository. You can create branches to work on improving separate parts of your code, and you can receive "pull requests" from external people who've tried to make their own improvements. But even when you're just working on code on your own, using GitHub is beneficial.
+
+Perhaps before reading through the rest of this text, you could do GitHub's own "Hello World" guide:
+
+[Hello World Guide](https://guides.github.com/activities/hello-world/)
+
+Which shows a little about how GitHub works and what the idea of Git is.
 
 _The Open Science Framework_
 
@@ -136,7 +144,7 @@ A feature of GitHub is that people can file "issues" for any project (well, any 
 
 Git and GitHub are very good at keeping track of the version of any file that is "diffable". Usually this is restricted to some form of ASCII text files, like most source code, but this also includes markdown files, html pages and for example LibreOffice documents. What Git is not good at is host large, and/or binary data files, for that you would want to use a data repository.
 
-The Open Science Framework started out as mainly a data repository. It works a bit different from other data repositories. For most of them you upload the data once, and then can't change it. The idea is that scientists shouldn't fudge their data. However, sometimes, during revision, you need to include some extra data, or discover that the data cleaning or pre-processing wasn't optimal. So you'd want to legitimately change the content of the repository. This _can_ be done on OSF.
+The Open Science Framework started out as mainly a data repository. It works a bit different from other data repositories. For most of them you upload the data once, and then can't change it. The idea is that scientists shouldn't fudge their data. However, sometimes, during revision, you need to include some extra data, or discover that the data cleaning or pre-processing wasn't optimal. So you'd want to legitimately update the content of the repository. This _can_ be done on OSF.
 
 What you can also do is "register" a version of your OSF repo. You can't change that registered version anymore. The only thing is that in some cases you can delete it. So usually, when a paper is accepted, you'd register the OSF repo, so that readers can be fairly sure that the content of that repository is the real deal.
 
@@ -209,9 +217,23 @@ If some changes need to be committed first and you run this from command line, g
 
 By default this is `vim` which works very differently from what you may be used to. In particular, everything works with keyboard shortcuts. In this case, you can simply edit the one line for the commit message, and then press `Esc` and then `:wq` to save the file and exit `vim`.
 
+## GitHub Guides
+
+GitHub provides a number of guides, similar to these tutorials. They seem useful and go into more detail:
+
+[GitHub Guides](https://guides.github.com/)
+
+## Happy Git with R
+
+You can get more in depth info on how to use Git with R in Jenny Brian's book:
+
+[Happy Git with R](https://happygitwithr.com/)
+
+It's a great book, and you can get the source code for the book from GitHub:
+
+[jennybc/happy-git-with-r](https://github.com/jennybc/happy-git-with-r)
 
 ## Unfinished topics:
 
 1. How to handle pull requests someone makes for your GitHub repo.
-2. Adequetely cite Jenny Brian's book: Happy Git with R.
 3. Explain .gitignore somewhat.
