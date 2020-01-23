@@ -1,0 +1,384 @@
+---
+title: 'Model Fitting: Grid Search'
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+author: Marius 't Hart
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='', eval=FALSE)
+```
+
+You'll start with a relatively simple example that still allows to see the benefits of grid search. In some of our experiments we ask people to localize where they think their hand is. Recently, we've been asking them to indicate this on a visual arc that is projected just above their actual hand. This requires the projection to be aligned with the hand, but unfortunately, this was not always the case.
+
+Let's load some data, and see how bad it is.
+
+```{r}
+load('data/localization.rda')
+```
+
+This loads two data frames. Both have 5 columns, first an angle the experiment was trying to put the hand at (`targetangle_deg`), then the recorded x and y coordinates of where the hand ended up (in centimeters: `handx_cm` and `handy_cm`) and where the participant indicated they thought their hand was as they indicated by tapping on a touch screen (`tapx_cm` and `tapy_cm`). This should all be centered on the 0,0 position. For now, the focus is on how accurate the measurements were, not how accurate the responses were, so we only plot the taps:
+
+
+```{r}
+par(mfrow=c(1,2))
+for (dfno in c(1,2)) {
+  df <- list(localization,mislocalization)[[dfno]]
+  plot( c(0,cos(seq(0,pi/2,(pi/2)/100))*10, 0),
+        c(0,sin(seq(0,pi/2,(pi/2)/100))*10, 0),
+        type='l', col='#AAAAAA', 
+        main=c('aligned','misaligned')[dfno], xlab='x [cm]', ylab='y [cm]', 
+        xlim=c(-2,12), ylim=c(-2,12),
+        bty='n', ax=F, asp=1)
+  points(df$tapx_cm,df$tapy_cm)
+  axis(side=1,at=c(0,5,10))
+  axis(side=2,at=c(0,5,10))
+}
+```
+
+For the `misaligned` data frame it looks like the measurements were off by perhaps two centimeter: everything is shifted upwards. However it still falls on a circle, so we can figure out how misaligned the measurements really were.
+
+You'll build a fairly simple model to do this. The type of model fitting we do involves minimize the (mean) **squared** error between the data and the model's output (given some input parameters). The first thing to do is write a function that calculates how wrong the model is (remember, all models are wrong). The second step is finding the parameters values that minimize this error. The second step can be done with functions that are built into R, but the first step really requires thinking about what is going on in your data. (This, by itself, is already useful.)
+
+First, all points falling on a circle will have the same distance to the centre of the circle, and this is the radius. In this case the radius is 10 centimeters.
+
+```{r}
+circleFitError <- function(par, coords, radius){
+  
+  # this is the distance of each point, to the circle at (x,y)
+  dist <- sqrt((coords$x - par['x'])^2 + (coords$y - par['y'])^2)
+  # this is the difference of that distance with the hypothesized radius
+  err <- (dist - radius)
+  RMSE <- sqrt(mean(err^2, na.rm=TRUE))
+  
+  return(RMSE)
+  
+}
+```
+
+
+This function takes three arguments: `par` is a named, numeric vector with an `x` and `y` coordinate of the centre of the circle, `coords`, which is a data frame with an `x` and `y` column of localization positions, and `radius` which is the radius of the circle the data should fall on.
+
+The first argument to these error functions in model fitting always specify parameters that we want to fit. We could also fit the radius of the circle, but it is better to keep your model as simple as possible, and in this case, we know that the radius is not affected by shifting the visual stimulus. The other arguments allow specifying data and other parameters that you don't want to fit.
+
+We can try this function on both data sets, and the error in the misaligned data set should be larger than in the aligned dataset.
+
+```{r}
+par <- c('x'=0,'y'=0) # this would be the centre of the circle given perfect measurements
+loccoords <- data.frame('x'=localization$tapx_cm, 'y'=localization$tapy_cm)
+miscoords <- data.frame('x'=mislocalization$tapx_cm, 'y'=mislocalization$tapy_cm)
+
+circleFitError(par=par,coords=loccoords,radius=10)
+circleFitError(par=par,coords=miscoords,radius=10)
+
+```
+
+The `aligned` data set indeed has smaller errors than the `misaligned` data set. The square root of the error in the `misaligned` data set is ~1.6, so this is how far the average localization point's distance to (0,0) is different from 10 cm. Notice that this does not indicate how far the centre of the measurements is away from the origin. Some of the data is pretty close to a circle with radius of 10 cm; those to the right, so their errors will be close to 0, while the points at the top are further away.
+
+# Optim
+
+Base R has a function that allows fitting such models to data: `optim()`. We will explain it's use here, but realize that it is considered deprecated by it's author (John Nash) and that he recommends using the packages `optimr` or `optimx` instead. We will discuss `optimx` later.
+
+The function `optim()` allows several fitting algorithms, where the default, and simplest option, is Nelder-Mead. You'll explore this here first. For many simple problems, this is also good enough, but for more complicated problems you should use more modern approaches.
+
+The syntax for `optim()` requires a set of starting parameter values in it's `par` argument, and an error function in it's `fn` argument. We already have this error function. The `...` argument allows us to specify arguments to the error function. The other arguments are interesting, but here we'll first see how this approach to fitting models works. Let's try finding the centre for the localization data in the `mislocalization` data frame:
+
+```{r}
+optim( par = c( 'x'=0,
+                'y'=0),
+       fn = circleFitError,
+       coords = miscoords,
+       radius = 10)
+```
+
+This returns a named list. The `$par` element gives you the fitted parameters it found, in this case (-.19, 1.99), so about 2 centimeters up, and little bit to the left. The `$value` element provides the value the error function returns with the fitted parameters. This value (0.447) is much lower than the one we got before (it was 2.57 with x=0, y=0) so this looks like an improvement. The `$counts` element tells you how many times `optim()` ran the error function to try out different parameters. That was 65 times, so luckily you didn't have to do this by hand.
+
+Let's see how well it does with the aligned data:
+
+```{r}
+optim( par = c( 'x'=15,
+                'y'=15),
+       fn = circleFitError,
+       coords = loccoords,
+       radius = 10)
+```
+
+The error value is larger than it was before fitting and `optim()` returned a location for the centre of the circle at x = 11.5 cm and y = 14.2 cm. What went wrong here? Can you fix the code?
+
+# Optimx
+
+So you saw that `optim()` is really nice and easy to use, but we also know that it is considered deprecated. So we _should_ be using better methods. The package `optimx` allows this, as it supercedes many existing optimization packages and even allows you to point to new optimization functions or packages.
+
+There is something to be said for using `optim()` though: it comes with base R. That means that if you use R Markdown notebooks to publish your analyses, it doesn't require to be installed, so it is a good fall-back method. I have not done this consistently yet, but it could be a good idea to test if `optimx` is installed and if it is, your code can use it, and if not, the code can use `optim()` instead.
+
+Run this code to see if `optimx` is installed on your system:
+
+```{r}
+if ('optimx' %in% installed.packages()) {
+  cat('optimx is installed, you can continue with the next exercise\n')
+} else {
+  cat('optimx is NOT installed, please install it before doing the next exercise\n')
+}
+```
+
+If you just want to use the methods that `optim()` offers, that is simple, as `optimx` is only a front-end to other optimization packges, including `optim()`.
+
+Let's see if we use the Nelder-Mead method from `optim()` by calling the function `optimx()` from the `optimx` package. First, we load the package, and then ask for help on the function:
+
+```{r}
+library(optimx)
+help(optimx)
+```
+
+That looks pretty similar to how `optim()` is used, so let's try it. Complete this chunk to get it to work, compare to the calls to `optim()` above:
+
+```{r}
+optimx( par = c( 'x'=0,
+                 'y'=0),
+       fn = circleFitError,
+       coords = miscoords)
+```
+
+Wow, this output looks different. It seems to allow different methods at the same time, and provides information on all different methods in a nicer looking table (or data frame?). In the help text for `optimx()` we saw the two default functions, to be Nelder-Mead and BFGS, and apparently, if we don't specify the methods, it does all of them. That is cool, but isn't one method enough?
+
+Let's try how well this BFGS method does with the incorrect starting parameters for the "good" localization data set:
+
+```{r}
+optimx( par = c( 'x'=15,
+                 'y'=15),
+       fn = circleFitError,
+       coords = loccoords,
+       radius = 10)
+```
+
+It does about equally bad, so we probably need to get a different solution for this problem.
+
+# Benchmarking
+
+For this data it doesn't matter so much as the model is fitted very quickly, but once you start getting into more complicated problems, you might want to think about optimizing your code a little bit. One way to do this for model fitting is to see which method runs faster. In the tables from `optimx()` we already got a clue. The column `fevals` tells us how often the error function was evaluated with each of the two methods. Nelder-Mead needed to use the error function 55 times, whereas BFGS only used 10 times. However, there might be other factors at play that affect the total time used for a single model fit.
+
+There are ways to measure the total time it takes to run any command. If you're not interested, this section can be skipped.
+
+We can use the `microbenchmark` package to do this. Specifically, it allows several commands to be tested at the same time, and provides some very nice output, even pretty plots if you want them. We need to specify the commands to test and how many times to test them (for more accurate results):
+
+```{r}
+library(microbenchmark)
+res <- microbenchmark('Nelder-Mead' = optimx( par = c( 'x'=1, 'y'=1), 
+                                              fn = circleFitError, 
+                                              method='Nelder-Mead', 
+                                              coords = loccoords, radius = 10),
+                      'BFGS' = optimx( par = c( 'x'=1, 'y'=1), 
+                                       fn = circleFitError, 
+                                       method='BFGS', 
+                                       coords = loccoords, radius = 10),
+                      times = 100
+               )
+print(res)
+```
+
+
+As promised, this allows easy plots:
+
+```{r}
+boxplot(res)
+```
+
+As well as pretty ggplot2 visualization:
+
+```{r}
+if (require("ggplot2")) {
+  autoplot(res)
+}
+
+```
+
+It doesn't really look like there is much of a difference between the two methods though. This may be different for other problems.
+
+# `L-BFGS-B` and search boundaries
+
+Sometimes the model we specify can only accept parameters in a specific range. That is, the model can't be evaluated if the parameters are outside of the range, or perhaps we already know that parameters outside this range don't make sense, even when the model can be fit with them (negative radius of a circle?). Either way, some optimization methods allow restricting the parameter search space, which may result in faster search, or better results. You will investigate one of those here. We will also benchmark this method on the mislocalization data set, as we don't really need it for the other data set anyway.
+
+```{r}
+res <- microbenchmark('Nelder-Mead' = optimx( par = c( 'x'=0.1, 'y'=0.1), 
+                                              fn = circleFitError, 
+                                              method='Nelder-Mead', 
+                                              coords = miscoords, radius = 10),
+                      'BFGS' = optimx( par = c( 'x'=0.1, 'y'=0.1), 
+                                       fn = circleFitError, 
+                                       method='BFGS', 
+                                       coords = miscoords, radius = 10),
+                      'L-BFGS-B' = optimx( par = c( 'x'=0.1, 'y'=0.1), 
+                                           fn = circleFitError, 
+                                           lower = c(-5,-5), upper=c(5,5), # boundaries!
+                                           method='L-BFGS-B', 
+                                           coords = miscoords, radius = 10),
+                      times = 100
+               )
+print(res)
+```
+
+Still doesn't matter much in this example, but at least you figured out how to use parameter search boundaries!
+
+# Control parameters
+
+Both in calls to `optim()` and `optimx()` you can specify a set of controls, that fine-tune how the search through the parameter space is done, or the criteria to stop it. Most of the time, the defaults are OK, but here we'll look into a few of the values we can change there.
+
+## `fnscale`
+
+## `ndeps`
+
+## `maxit`, `abstol` and `reltol` (or `pgtol`)
+
+
+
+# Local minima
+
+As you saw when fitting the model with very incorrect starting parameters, sometimes the algorithm doesn't converge on a good estimate. A good choice of starting parameters is therefore also important. For the circle fitting problem, you could say that the average of the x-coordinates that are in the data and the average of the y-coordinates that are in the data, would always avoid a wrong set of starting parameters:
+
+```{r}
+optim( par = c( 'x'=mean(loccoords$x),
+                'y'=mean(loccoords$y)),
+       fn = circleFitError,
+       coords = loccoords,
+       radius = 10)
+```
+
+So this means that for some problems, you can usually (or always?) make a reasonable guess as to what the true parameters should be, or at least put them somewhere in the search space, where a search algorithm doesn't get stuck on an incorrect location.
+
+Such incorrect locations are called 'local minima'. The presence of local minima is not always obvious or detectable, especially with models where the parameters interact in sometimes unpredictable ways. One way to get out of this is to do a _"grid search"_ first.
+
+## Grid search
+
+In grid search, you evaluate the error function on a set of parameter values that covers the space of potential parameter values. Then you take a few of the parameter combinations with a low error, say the five parameters with the lowest errors. You run the fitting algorithm on those and record the parameters with the lowest error as the fit that you will use.
+
+We'll do a simplified example of this here, still using the circle data. It is called _grid_ search, as you're supposed to make a grid of all the combinations of a list of possible parameter values. In this case, we use a few starting positions that are in the range of the data.
+
+```{r}
+xvals <- seq(min(miscoords$x),max(miscoords$x),diff(range(miscoords$x))/3) # 4 x-values
+yvals <- seq(min(miscoords$y),max(miscoords$y),diff(range(miscoords$y))/3) # 4 y-values
+searchgrid <- expand.grid('x'=xvals, 'y'=yvals) # all 16 combinations
+kable(searchgrid)
+```
+
+Now we can use apply on each row of that data frame to get the mean squared errors for each of the combinations of x and y coordinates:
+
+```{r}
+MSE <- apply(searchgrid,FUN=circleFitError,MARGIN=c(1),coords=miscoords,radius=10)
+print(MSE)
+```
+
+We can now use the lowest 3 MSE's as starting points:
+
+```{r}
+topgrid <- searchgrid[order(MSE)[1:3],]
+print(topgrid)
+```
+
+And basically we'll apply `optimx()` to each row of that data frame:
+
+```{r}
+allfits <- do.call("rbind",
+                   apply( topgrid,
+                          MARGIN=c(1),
+                          FUN=optimx,
+                          fn=circleFitError,
+                          method='Nelder-Mead',
+                          coords=miscoords,
+                          radius=10 ) )
+kable(allfits)
+```
+
+The second row shows a local minimum, but the first and third row are pretty good (perhaps equally good), and with very similar x and y coordinates. However, we need to pick one, and it makes sense to pick the row with the lowest number in the column `value`:
+
+```{r}
+winningmodel <- allfits[order(allfits$value)[1],]
+print(winningmodel)
+```
+
+Ties should be rare, and since the parameters make the model fit the data equally well, you could just pick the first one, or a random one. In essence we get the same fitted circle centre as we got several times earlier. Let's see how well that circle works on all this data, integrating all we have done so far:
+
+```{r}
+par(mfrow=c(1,2))
+for (dfno in c(1,2)) {
+  # get the right data frame:
+  df <- list(loccoords,miscoords)[[dfno]]
+  # plot an ideal quarter circle:
+  plot( c(0,cos(seq(0,pi/2,(pi/2)/100))*10,0), 
+        c(0,sin(seq(0,pi/2,(pi/2)/100))*10,0), 
+        type='l', col='#AAAAAA', 
+        main=c('aligned','misaligned')[dfno], xlab='x [cm]', ylab='y [cm]', 
+        xlim=c(-2,12),ylim=c(-2,12), 
+        bty='n', ax=F, asp=1)
+  # scatter plot of the actual data:
+  points(df$x,df$y)
+  # make search grid:
+  searchgrid <- expand.grid('x'=seq(min(df$x),max(df$x),diff(range(df$x))/3),
+                            'y'=seq(min(df$y),max(df$y),diff(range(df$y))/3)) 
+  # evaluate starting positions:
+  MSE <- apply(searchgrid,FUN=circleFitError,MARGIN=c(1),coords=df,radius=10)
+  # run optimx on the best starting positions:
+  allfits <- do.call("rbind",
+                   apply( searchgrid[order(MSE)[1:3],],
+                          MARGIN=c(1),
+                          FUN=optimx,
+                          fn=circleFitError,
+                          method='Nelder-Mead',
+                          coords=df,
+                          radius=10 ) )
+  # pick the best fit:
+  win <- allfits[order(allfits$value)[1],]
+  # plot the centre:
+  points(win$x,win$y,col='red')
+  # plot a circle of radius 10 around the centre:
+  lines( (cos(seq(0,pi/2,(pi/2)/100))*10) + win$x, 
+         (sin(seq(0,pi/2,(pi/2)/100))*10) + win$y, col='red')
+  axis(side=1,at=c(0,5,10))
+  axis(side=2,at=c(0,5,10))
+}
+```
+
+## Local minima
+
+Let's back-track a bit to see why grid search can help us circumvent local minima. First, we'll visualize the grid search for this circle fit. We'll use a slightly denser search grid, and notice that it extends well beyond the previous area. This is to show the overal landscape of fit quality a little better.
+
+```{r}
+searchgrid <- expand.grid('x'=seq(-8,22,1), 'y'=seq(-8,22,1))
+MSE <- apply(searchgrid,FUN=circleFitError,MARGIN=c(1),coords=miscoords,radius=10)
+```
+
+Now we can plot the size of the error over the x,y coordinates of where that error came from as a mesh:
+
+```{r}
+persp(unique(searchgrid$x), unique(searchgrid$y), matrix(sqrt(MSE), ncol=length(unique(searchgrid$x))), phi = 60, theta = 35,
+  xlab = "X-coordinate", ylab = "Y-coordinate", zlab='MSE',
+  main = "searchgrid MSEs", col='#999999', shade=0.7, border=NA
+)
+```
+
+Notice how the X and Y axis are directed, as indicate by the arrows (can be hard to see).
+
+You can now see that the MSE doesn't vary randomly throughout the search space. For the most part, there is a valley with an optimal lowest point: the further you get away from this point, the larger the error. There is a little ridge of higher errors, this is where the data is. You can also see that if you put the centre of the circle at a point to the top/right of that ridge, there is a low point too. Whichever way you move from there, the errors go up, and that is the additional local minimum in the parameter space around (11,16).
+
+Here I show the lowest MSEs on top of a simpler landscape:
+
+```{r}
+searchgrid <- expand.grid('x'=seq(-4,18,2), 'y'=seq(-4,18,2))
+MSE <- apply(searchgrid,FUN=circleFitError,MARGIN=c(1),coords=miscoords,radius=10)
+persp(unique(searchgrid$x), unique(searchgrid$y), matrix(sqrt(MSE), ncol=length(unique(searchgrid$x)), byrow=FALSE), phi = 60, theta = 40,
+  xlab = "X-coordinate", ylab = "Y-coordinate", zlab='MSE',
+  main = "searchgrid MSEs", col='#999999', shade=0.7, border=NA
+) -> res
+bestidx <- order(MSE)[1:8]
+best <- searchgrid[bestidx,]
+points(trans3d(best[,1],best[,2],sqrt(MSE[bestidx]), pmat=res), col='red')
+```
+
+When you start the search through parameter space at that one point at the local minimum, your search will not find the best fit, since any small change in fit parameters from that point will _increase_ the MSE. This 2-dimensional example allows you to see this, but for most optimization problems it isn't so easy to see, as usually there are more parameters, but a grid search will still help you get the best possible fit.
+
+# Defining the grid
+
+The art of doing grid search to avoid getting stuck in local minima is hard and depends on your model and data a lot. When you have a lot of points on your grid, the search will take long, so this is only helpful if the parameter landscape has lots of local minima, especially close to the "real" parameter values. This is difficult to know. Trying out a few different grids on an artificial dataset, where you know the real parameters that generated the data, and figuring out how to retrieve those best may be a strategy you use.

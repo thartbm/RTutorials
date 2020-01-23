@@ -1,0 +1,15 @@
+---
+title: 'Model Fitting: Model Evaluation'
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+author: Marius 't Hart
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='', eval=FALSE)
+```
+

@@ -1,0 +1,195 @@
+---
+title: 'Model Fitting: Error Minimization'
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+author: Marius 't Hart
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='', eval=FALSE)
+```
+
+Computational models provide a (mathematically) precise explanation for observed data. Some people will say that all models are wrong, but then again, some models are more wrong than others. Here you will learn how to build and fit some simple models using optimization techniques, and then pick the least wrong model.
+
+For some models, there is an analytical solution, that doesn't require model fitting. We'll start with that as we can then verify that a fitted model is pretty good. A simple model problem that has an analytic solution is a linear model. Here we'll consider a linear model with two parameters, an intercept _a_, and a slope _b_:
+
+$y = a + bx$
+
+First, we'll generate some data:
+
+```{r}
+# for reproducibility:
+set.seed(1937)
+
+# these are the intercept and slope we'll use:
+a <- 5.2
+b <- 3.1
+
+# x will have random numbers:
+x <- runif(n=25, min=0, max=5)
+# y will depend on the generative model plus some uniform noise:
+y <- (b*x) + a + rnorm(25)
+
+# let's see our artificial data:
+plot(x,y, xlim=c(0,5), ylim=c(0,25))
+```
+
+We can find the optimal intercept and slope given the data, by using the function `lm()`:
+
+```{r}
+data <- data.frame(x,y)
+linmod <- lm(y ~ x, data)
+summary(linmod)
+```
+
+Not only does that fit the data pretty well (look at those p-values!) but the linmod object has a property `coefficients` that allows us to get a vector corresponding to a & b:
+
+```{r}
+print(linmod$coefficients)
+```
+
+You'll notice that these arent't exactly the ones that we put in, which is because we also added uniform noise to the dependent variable. The intercept and slope that we get here can be shown to be the optimal intercept and slope, if you want to minimize the residual errors between the model and the data. That is, you can't find an intercept and/or slope that further reduces the errors between model and data.
+
+There's two things to unpack here. First, any model fit can only be as good as `lm()` but not better (and probably a bit worse). We'll see this later. Second, what exactly do we mean with errors between model and data?
+
+That, we can illustrate:
+
+```{r}
+plot(x,y, xlim=c(0,5), ylim=c(0,25))
+abline(linmod, col='blue')
+
+ab <- linmod$coefficients
+y_pred <- ab[1] + (x*ab[2])
+segments(x0=x, y0=y, x1=x, y1=y_pred, col='red')
+```
+
+The blue line represents prediction of y coordinates produced by `lm()`, based on x coordinates. But since the real data is at the black circles, that line is off somewhat for every observation. It is off by the red lines. Those are the errors, and we want them to be as small as possible.
+
+# Model
+
+Instead of using `lm()` which has only limited application, we want to do something more general. There are algorithms that can search through the possible values of the parameter of a model until they can't reduce the errors of the model anymore. To do this, those algorithms need a function that calculates the error of the model, so that is the first thing we need. However, it should be independent of the amount of data that goes into fitting the model, so we take the mean error. If a model is good, the mean error should work as well for old data as for new data, regardless of how many data points there are. Sometimes you see people minimize the mean squared error, and sometimes the root mean squared error. Here we'll do both.
+
+Let's say we strongly suspect that the data is explained by a line with a slope and intercept.
+
+Here is a function that takes the parameters for a line (intercept and slope) as well as a data.frame with x and y coordinates of the data, and returns the MSE (mean squared error):
+
+```{r}
+lineMSE <- function(par, data) {
+  # predicted y coordinates: 
+  #     par[1] + (par[2]*data$x)
+  # error with real y coordinates: 
+  #     data$y - ( par[1] + (par[2]*data$x) )
+  # squared errors:
+  #     ( data$y - ( par[1] + (par[2]*data$x) ) )^2
+  # mean squared errors:
+  #     mean( ( data$y - ( par[1] + (par[2]*data$x) ) )^2 )
+  return( mean( ( data$y - ( par[1] + (par[2]*data$x) ) )^2 ) )
+}
+```
+
+This can easily be extended into a function that returns the RMSE (root mean squared error) for a model that assumes a line:
+
+```{r}
+lineRMSE <- function(par, data) {
+  return( sqrt( mean( ( data$y - ( par[1] + (par[2]*data$x) ) )^2 ) ) )
+}
+```
+
+Let's test these functions with the parameters that were already optimized by `lm()`. We can use the MSE:
+
+```{r}
+lineMSE(par=ab, data=data)
+```
+
+Or the RMSE:
+
+```{r}
+lineRMSE(par=ab, data=data)
+```
+
+Which is indeed the square root of the error returned by `lineMSE()`.
+
+There's a function that comes with R that can be used to minimize errors by searching model parameters: `optim()`.
+
+```{r}
+help(optim)
+```
+
+As you can see in the help page, we need to provide starting parameters (`par`), and it seems pretty clear that the slope is positive, and likely the intercept, so we'll put them at 1 and 1. We also need to provide the name of a function (`fn`) which is going to be one of the two error functions we just created. In place of the dots, we can provide any further arguments for the function, which in this case will just be the data frame with data, called `data`. For now, we can probably ignore the other arguments to `optim()` and just see what it does.
+
+```{r}
+lineFitMSE <- optim( par = c(1,1),
+                     fn = lineMSE,
+                     data = data )
+print(lineFitMSE)
+```
+
+The `$par` property of the model fit shows us the parameter values where `optim()` thought it could not really improve on the fit anymore. These are fairly close to the best parameter values, but not exactly the same:
+
+```{r}
+lineFitMSE$par - ab
+```
+
+This means that `optim()` can get us pretty close to the optim-al solution. In some specific situations there might be a better way, and if that is the case, you should use that. But if there is no perfect analytical solution, finding pretty good parameters is a pretty good solution.
+
+The `$value` property is the value the error function returns with these parameter values. The `$count()` property says how often the error function was evaluated (and how often the gradient function was evaluated, but since we didn't specify one, it was never evaluated). The other properties, I'm not sure about.
+
+And we can try this for the RMSE as well:
+
+```{r}
+lineFitRMSE <- optim( par = c(1,1),
+                      fn = lineRMSE,
+                      data = data )
+print(lineFitRMSE)
+```
+
+This gives pretty much the same output, so it seems that - for this case - it doesn't matter if we use MSE or RMSE. When would there be a difference between MSE and RMSE? Perhaps with some very large errors, for example when there is a clear outlier?
+
+Let's introduce an outlier to our data set, and see what `lm()` does:
+
+```{r}
+data_o <- data.frame('x'=c(data$x, 1), 'y'=c(data$y, 25))
+
+linmod_o <- lm(y ~ x, data_o)
+summary(linmod_o)
+
+plot(data_o, xlim=c(0,5), ylim=c(0,25))
+abline(linmod_o, col='blue')
+
+ab <- linmod_o$coefficients
+y_pred <- ab[1] + (data_o$x*ab[2])
+segments(x0=data_o$x, y0=data_o$y, x1=data_o$x, y1=y_pred, col='red')
+```
+
+It may not be immediately obvious, but the intercept has gone up from 5.46 to 7.38, so almost 2 points. The slope has gone down a little bit, from 2.93 to 2.44.
+
+How does `optim()` handle this:
+
+```{r}
+lineMSE_o <- optim( par = c(1,1),
+                    fn = lineMSE, 
+                    data = data_o )
+print(lineMSE_o)
+```
+
+And, crucially, based on an RMSE:
+
+```{r}
+lineRMSE_o <- optim( par = c(1,1),
+                     fn = lineRMSE, 
+                     data = data_o )
+print(lineRMSE_o)
+```
+
+Now, we do see a slight difference in fitted parameters between the two approaches.
+
+```{r}
+sqrt(lineMSE_o$value) - lineRMSE_o$value 
+```
+
+That is, the squared error is somewhat larger in the MSE case, but I'm not sure I care about this so much.
+
