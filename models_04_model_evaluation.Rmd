@@ -13,3 +13,14 @@ library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
 
+When you have multiple models that can explain a given dataset to some extent, you'd want to have some way to distinguish between good and bad models. In other words, you want to evaluate your models. Since we've been using MSE so far, there is only one metric for model evaluation that applies (as far as I know): Akaike's Information Criterion.
+
+# Double Drift Reset Limit
+
+We will compare 4 models of one data set, and then decide that two are comparable and two are not good enough.
+
+
+# Two-Rate and One-Rate model
+
+In this section we will compare two model, but we will also investigate the need to think about what it means to have **independent** observations.
+
