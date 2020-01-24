@@ -1,0 +1,25 @@
+---
+title: 'Model Fitting: Model Evaluation'
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+author: Marius 't Hart
+---
+
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+opts_chunk$set(comment='', eval=FALSE)
+```
+
+When calculating an AIC or related metric, one important ingredient is the number of **independent** observations. This might seem straightforward, but isn't always the case. When are observations truly independent? Below, we'll revisit the two-rate model and see how to get the number of independent observations (or effective sample size) for a time series. 
+
+# Two-Rate and One-Rate model
+
+In this section we will compare two models fit to the same data.
+
+
+# Other
+
+rho-based estimate for non-time series data with less than random sampling
