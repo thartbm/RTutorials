@@ -13,3 +13,7 @@ library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
 
+Most model evaluation criteria don't work with minimizing a loss function (like MSE) but by maximizing the likelihood of the model. If you'd like to calculate a BIC, AICc or Hannan-Quinn criterion for your model, it needs to be fit based on maximizing the likelihood.
+
+_Note:_ This does not mean that your previous model fits are wrong. The likelihood of the model can be shown to be at it's maximum at the same parameters where the error is minimized. It's just that you can only use AIC for model evaluation.
+
