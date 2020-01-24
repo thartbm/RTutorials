@@ -15,6 +15,8 @@ opts_chunk$set(comment='', eval=FALSE)
 
 Computational models provide a (mathematically) precise explanation for observed data. Some people will say that all models are wrong, but then again, some models are more wrong than others. Here you will learn how to build and fit some simple models using optimization techniques, and then pick the least wrong model.
 
+# Simple linear example
+
 For some models, there is an analytical solution, that doesn't require model fitting. We'll start with that as we can then verify that a fitted model is pretty good. A simple model problem that has an analytic solution is a linear model. Here we'll consider a linear model with two parameters, an intercept _a_, and a slope _b_:
 
 $y = a + bx$
@@ -69,7 +71,7 @@ segments(x0=x, y0=y, x1=x, y1=y_pred, col='red')
 
 The blue line represents prediction of y coordinates produced by `lm()`, based on x coordinates. But since the real data is at the black circles, that line is off somewhat for every observation. It is off by the red lines. Those are the errors, and we want them to be as small as possible.
 
-# Model
+# Model fitting
 
 Instead of using `lm()` which has only limited application, we want to do something more general. There are algorithms that can search through the possible values of the parameter of a model until they can't reduce the errors of the model anymore. To do this, those algorithms need a function that calculates the error of the model, so that is the first thing we need. However, it should be independent of the amount of data that goes into fitting the model, so we take the mean error. If a model is good, the mean error should work as well for old data as for new data, regardless of how many data points there are. Sometimes you see people minimize the mean squared error, and sometimes the root mean squared error. Here we'll do both.
 
@@ -113,6 +115,37 @@ lineRMSE(par=ab, data=data)
 
 Which is indeed the square root of the error returned by `lineMSE()`.
 
+## Loss functions
+
+These two functions specify how "bad" a model is if it has specific values for the parameters (intercept & sope) and is applied to a specific dataset. Each uses a way to take the errors between the data and the prediction to calculate a "loss". The trick is then to find parameter values that minimize the loss. There are other ways to specify loss.
+
+### Mean Absolute Error
+
+We could also use the mean absolute error (MAE). This has advantages if errors are on a ratio scale, for example in business, 100 dollars loss, is really 10 times as bad as 10 dollars loss. It's also less sensitive to ouliers. It doesn't always work though, and has some issues (e.g. when the prediction is perfect or MAE=0, the gradient is undefined and the model can't be evaluated - not sure how often this happens). So unless you have realy good reasons to use MAE, you should clean up your data and pick either MSE or RMSE.
+
+### Huber Loss
+
+One way to overcome the disadvantages of MAE, is to use something like MAE for larger errors (which makes it less sensitive to ouliers), and use MSE for smaller errors (which ensures the function can always be differentiated). The cut-off for what larger or smaller errors are can be set. We'll not cover this here.
+
+### R Squared
+
+This is not your regular correlation coefficient, but:
+
+$R^2 = 1 - \frac{MSE(model)}{MSE(mean)}$
+
+That is: how good is the model relative to a baseline model that just predicts the mean of the data? Your model could be worse than the mean, so there's no lower limit to this value. However, usually, we make somewhat smart models, and those are going to be better than the mean. In that case, MSE(model) will be less than MSE(mean), and $R^2$ will be between 0 and 1, and either way better models will have a higher $R^2$. That also means that it shouldn't be minimized, but maximized (multiply by -1 in functions that minimize something).
+
+### Other metrics
+
+There are some other, infrequently used metrics, that I will just list here.
+
+- Adjusted R Squared ($R^2$)
+- Mean Square Percentage Error (MSPE)
+- Mean Absolute Percentage Error (MAPE)
+- Root Mean Squared Logarithmic Error (RMSLE)
+
+# Error minimization with `optim()`
+
 There's a function that comes with R that can be used to minimize errors by searching model parameters: `optim()`.
 
 ```{r}
@@ -147,49 +180,10 @@ lineFitRMSE <- optim( par = c(1,1),
 print(lineFitRMSE)
 ```
 
-This gives pretty much the same output, so it seems that - for this case - it doesn't matter if we use MSE or RMSE. When would there be a difference between MSE and RMSE? Perhaps with some very large errors, for example when there is a clear outlier?
+This gives pretty much the same output, so it seems that it doesn't matter if we use MSE or RMSE. And that makes some sense: the parameter values that minimize MSE will also minimize RMSE and vice versa (the same is true for the $R^2$ metric mentioned above, since it is based on MSE). There might be slight differences, as `optim()` will usually stop trying to improve the parameters if the decrease in error is smaller than some set number. Since RMSE is smaller than MSE, it might give a slightly better fit, but it should never matter much.
 
-Let's introduce an outlier to our data set, and see what `lm()` does:
+In other words: pick whichever makes sense to you. For the next few tutorials, we'll stick to MSE, and the reason is that we can use it to calculate a model evaluation metric (AIC: Akaike's Information Criterion) which will be introduced in the tutorial on model evaluation.
 
-```{r}
-data_o <- data.frame('x'=c(data$x, 1), 'y'=c(data$y, 25))
+# Take home
 
-linmod_o <- lm(y ~ x, data_o)
-summary(linmod_o)
-
-plot(data_o, xlim=c(0,5), ylim=c(0,25))
-abline(linmod_o, col='blue')
-
-ab <- linmod_o$coefficients
-y_pred <- ab[1] + (data_o$x*ab[2])
-segments(x0=data_o$x, y0=data_o$y, x1=data_o$x, y1=y_pred, col='red')
-```
-
-It may not be immediately obvious, but the intercept has gone up from 5.46 to 7.38, so almost 2 points. The slope has gone down a little bit, from 2.93 to 2.44.
-
-How does `optim()` handle this:
-
-```{r}
-lineMSE_o <- optim( par = c(1,1),
-                    fn = lineMSE, 
-                    data = data_o )
-print(lineMSE_o)
-```
-
-And, crucially, based on an RMSE:
-
-```{r}
-lineRMSE_o <- optim( par = c(1,1),
-                     fn = lineRMSE, 
-                     data = data_o )
-print(lineRMSE_o)
-```
-
-Now, we do see a slight difference in fitted parameters between the two approaches.
-
-```{r}
-sqrt(lineMSE_o$value) - lineRMSE_o$value 
-```
-
-That is, the squared error is somewhat larger in the MSE case, but I'm not sure I care about this so much.
-
+What you should take away from this tutorial is that if you can describe your data with a model that doesn't have an analytical solution (or even if it does) you can find the parameters that minimize the error between the model's predictions and the real data. And that in R, we can use `optim()` for that, and this requires specifying an error function using MSE.
