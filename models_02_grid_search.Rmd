@@ -155,73 +155,7 @@ optimx( par = c( 'x'=15,
        radius = 10)
 ```
 
-It does about equally bad, so we probably need to get a different solution for this problem.
-
-# Benchmarking
-
-For this data it doesn't matter so much as the model is fitted very quickly, but once you start getting into more complicated problems, you might want to think about optimizing your code a little bit. One way to do this for model fitting is to see which method runs faster. In the tables from `optimx()` we already got a clue. The column `fevals` tells us how often the error function was evaluated with each of the two methods. Nelder-Mead needed to use the error function 55 times, whereas BFGS only used 10 times. However, there might be other factors at play that affect the total time used for a single model fit.
-
-There are ways to measure the total time it takes to run any command. If you're not interested, this section can be skipped.
-
-We can use the `microbenchmark` package to do this. Specifically, it allows several commands to be tested at the same time, and provides some very nice output, even pretty plots if you want them. We need to specify the commands to test and how many times to test them (for more accurate results):
-
-```{r}
-library(microbenchmark)
-res <- microbenchmark('Nelder-Mead' = optimx( par = c( 'x'=1, 'y'=1), 
-                                              fn = circleFitError, 
-                                              method='Nelder-Mead', 
-                                              coords = loccoords, radius = 10),
-                      'BFGS' = optimx( par = c( 'x'=1, 'y'=1), 
-                                       fn = circleFitError, 
-                                       method='BFGS', 
-                                       coords = loccoords, radius = 10),
-                      times = 100
-               )
-print(res)
-```
-
-
-As promised, this allows easy plots:
-
-```{r}
-boxplot(res)
-```
-
-As well as pretty ggplot2 visualization:
-
-```{r}
-if (require("ggplot2")) {
-  autoplot(res)
-}
-
-```
-
 It doesn't really look like there is much of a difference between the two methods though. This may be different for other problems.
-
-# `L-BFGS-B` and search boundaries
-
-Sometimes the model we specify can only accept parameters in a specific range. That is, the model can't be evaluated if the parameters are outside of the range, or perhaps we already know that parameters outside this range don't make sense, even when the model can be fit with them (negative radius of a circle?). Either way, some optimization methods allow restricting the parameter search space, which may result in faster search, or better results. You will investigate one of those here. We will also benchmark this method on the mislocalization data set, as we don't really need it for the other data set anyway.
-
-```{r}
-res <- microbenchmark('Nelder-Mead' = optimx( par = c( 'x'=0.1, 'y'=0.1), 
-                                              fn = circleFitError, 
-                                              method='Nelder-Mead', 
-                                              coords = miscoords, radius = 10),
-                      'BFGS' = optimx( par = c( 'x'=0.1, 'y'=0.1), 
-                                       fn = circleFitError, 
-                                       method='BFGS', 
-                                       coords = miscoords, radius = 10),
-                      'L-BFGS-B' = optimx( par = c( 'x'=0.1, 'y'=0.1), 
-                                           fn = circleFitError, 
-                                           lower = c(-5,-5), upper=c(5,5), # boundaries!
-                                           method='L-BFGS-B', 
-                                           coords = miscoords, radius = 10),
-                      times = 100
-               )
-print(res)
-```
-
-Still doesn't matter much in this example, but at least you figured out how to use parameter search boundaries!
 
 # Control parameters
 
