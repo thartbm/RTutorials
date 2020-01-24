@@ -19,3 +19,18 @@ When you have multiple models that can explain a given dataset to some extent, y
 
 We will compare 4 models fit to one data set, and then decide that two are comparable and two are not good enough.
 
+What was this experiment about? In this experiment, participants peripherally saw a stimulus that in reality moved straigh forward, but because of added internal motion appears to move at some angle. Which means that people's perception of the location of the stimulus is illusory. The strength of the illusion can be expressed as the size of the angle between the path straight forward and the perceived path. The strength of the illusion varies between participants, but also because of the internal and external motion.
+
+After some time (typically ~2 s), it seems that the illusion resets to the real position of the stimulus. This might simply be because of the passage of time, like in the Necker-cube illusion, the perspective spontaneously switches between two possibilities. It's been shown that while people don't have consciouss access to the real position, it is available for eye-movements, and hence has to be represented somewhere in the brain. So it could also be that when the distance between the perceived and retinal position is too large, perception switches back to the retinal position, and that this causes the reset.
+
+After viewing the stimulus peripherally, we asked participants to draw the path that they saw the stimulus take on the screen, and then used an algorithm to estimate the location of the reset. We then average those positions for each of the 6 different stimulus condition (2 "forward" speeds x 3 "sideways" speeds). Since we know how fast the stimulus moved forward, the y-coordinate of the reset can be converted to time since start of the trial, and the x-coordinate gives distance between the real and perceived positions. That way, we can test which of the two predicts resets better.
+
+Let's have a look at the dataset.
+
+```{r}
+resets <- read.csv('data/reset_points.csv', stringsAsFactors = F)
+str(resets)
+```
+
+There are several participants, and the stimulus is described by internal speed (sideways motion) and external speed (forward motion). The average location of the resets is given by boundX_mean and boundY_mean.
+
