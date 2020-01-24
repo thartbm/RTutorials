@@ -1,5 +1,5 @@
 ---
-title: 'Model Fitting'
+title: 'Model Fitting: Parameter Limits'
 output:
   html_notebook: default
   html_document:
@@ -13,6 +13,9 @@ library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
 
+For some models, parameter are restricted to a certain range. In the example below, we have retention rates: how much do you remember of something you learned earlier? This can't be negative and it can't be more 100%. That's why it only makes sense to consider parameter values between 0 and 1. Here we look at how to do that.
+
+We also look at benchmarking a little: comparing fitting algorithms in terms of speed. This may matter if you have to fit the same model to a really number of individual datasets.
 
 # Two-rate model of visuomotor adaptation
 
@@ -154,7 +157,7 @@ twoRateMSE <- function(par, schedule, reaches) {
     return(Inf)
   }
   
-  return( sqrt( mean((twoRateModel(par, schedule)$total - reaches)^2, na.rm=TRUE) ) )
+  return( mean((twoRateModel(par, schedule)$total - reaches)^2, na.rm=TRUE) )
   
 } 
 ```
@@ -188,7 +191,7 @@ There are some problems with the above function. First, returning `Inf` as a ver
 ```{r}
 twoRateMSE <- function(par, schedule, reaches) {
   
-  bigError <- sqrt(mean(schedule^2, na.rm=TRUE)) * 10
+  bigError <- mean(schedule^2, na.rm=TRUE) * 10
   
   # learning and retention rates of the fast and slow process are constrained:
   if (par['Ls'] > par['Lf']) {
@@ -198,7 +201,7 @@ twoRateMSE <- function(par, schedule, reaches) {
     return(bigError)
   }
   
-  return( sqrt( mean((twoRateModel(par, schedule)$total - reaches)^2, na.rm=TRUE) ) )
+  return( mean((twoRateModel(par, schedule)$total - reaches)^2, na.rm=TRUE) )
   
 } 
 ```
@@ -225,11 +228,15 @@ optimx(par = par,
        reaches = reaches)
 ```
 
-That works, but doesn't seem to change all that much. It does omit the Nelder-Mead fit... maybe that can't deal with limits on parameters?
+That works, but doesn't seem to change all that much (although notice that Rs is now exactly 1). It does omit the Nelder-Mead fit... maybe that can't deal with limits on parameters?
 
-## Benchmarking optimization methods
+# Benchmarking
 
-Now for this model it might be more interesting to see how fast each of the methods works:
+For this data it doesn't matter so much as the model is fitted very quickly, but once you start getting into more complicated problems, you might want to think about optimizing your code a little bit. One way to do this for model fitting is to see which method runs faster. In the tables from `optimx()` we already got a clue. The column `fevals` tells us how often the error function was evaluated with each of the two methods. Nelder-Mead needed to use the error function 55 times, whereas BFGS only used 10 times. However, there might be other factors at play that affect the total time used for a single model fit.
+
+There are ways to measure the total time it takes to run any command. If you're not interested, this section can be skipped.
+
+We can use the `microbenchmark` package to do this. Specifically, it allows several commands to be tested at the same time, and provides some very nice output, even pretty plots if you want them. We need to specify the commands to test and how many times to test them (for more accurate results):
 
 ```{r}
 library(microbenchmark)
@@ -250,17 +257,27 @@ res <- microbenchmark('Nelder-Mead' = optimx( par = par,
                )
 
 print(res)
+```
 
+In this table you mostly want to look at the mean and median columns, as they would be most predictive of differences in runtime between different methods of fitting. Nelder-Mead is consistently slower than the others on my machine (like the author of optim warned us), and BFGS might be somewhat faster in this case. However, they're all comparable for our purposes (finish within a second), and by using `L-BFGS-B` (whatever that stands for) we don't have to check the limits for parameters in our own code.
+
+If you don't have `ggplot2` installed, you can use boxplot for a visualization:
+
+```{r}
+boxplot(res)
+```
+
+Or if you do have `ggplot2` you can get a prettier plot:
+
+```{r}
 if (require("ggplot2")) {
   autoplot(res)
 }
 ```
 
-Nelder-Mead might be slightly faster in this case, despite the warning from the author of `optim` that it is quite slow. However, our function now doesn't check boundaries by itself anymore, so we are going to go with `L-BFGS-B` (whatever that stands for).
-
 ## Two-rate grid search
 
-At this point, we can run our optimization algorithm of choice on our model so that it fits the data, but there is one possible problem that we still want to take care of: local minima. We'll use the same solution as we had above: grid search!
+At this point, we can run our optimization algorithm of choice on our model so that it fits the data, but there is one possible problem that we still want to take care of: local minima. We'll use the solution we know from the previous tutorial: grid search!
 
 ```{r}
 nvals <- 5
@@ -288,7 +305,7 @@ win <- allfits[order(allfits$value)[1],]
 print(win[1:5])
 ```
 
-The MSE `value` is very similar to the one we had before without grid search (2.29). Perhaps this means we didn't need grid search after all, but with this model there is a 4-dimensional parameter space and no obvious way to find where local minima are, so it is better to do grid search.
+The MSE `value` is very similar to the one we had before without grid search (5.28) and so are the parameter values. Perhaps this means we didn't need grid search after all, but with this model there is a 4-dimensional parameter space and no obvious way to see if and where local minima are, so it is better to do grid search.
 
 ## Plot model
 
