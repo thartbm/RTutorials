@@ -58,6 +58,8 @@ print(data.frame('SSL'=SSL[1:10], 'likelihood'=dnorm(SSL[1:10], mean=mean(SSL), 
 
 As you can see, closer to 5.006 the likelihood is highest.
 
+## Two simple models
+
 Now, we could make two simple models, one based on MSE minimization and based on likelihood maximization to find the best model. Both _should_ find the same solution. Let's see.
 
 Here's a function that returns a mean square error:
@@ -99,6 +101,8 @@ And for the Likelihood:
 print(Lopt <- optim(par=4, fn=SSL_Likelihood, data=SSL, method='Brent', lower=0, upper=10, control=control))
 ```
 
+## Evaluating the likelihood maximization model
+
 So both methods find the exact same parameter values. Except for the likelihood we can now also calculate BIC and Hannan-Quinn:
 
 ```{r}
@@ -120,3 +124,6 @@ print(c('AIC'=AIC, 'BIC'=BIC,'Hannan-Quinn'=HQC))
 ```
 
 Of course, you could debate if those 50 observations are really independent.
+
+# Two-Rate Model
+
