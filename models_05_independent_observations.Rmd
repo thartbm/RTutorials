@@ -17,9 +17,334 @@ When calculating an AIC or related metric, one important ingredient is the numbe
 
 # Two-Rate and One-Rate model
 
-In this section we will compare two models fit to the same data.
+In this section we will compare two models fit to the same data. One will be the two-rate model from the tutorial on parameter limits. The other will be a comparable one-rate, that only has one process. And we'll see the effect it has on the AIC if we use the N you might think is appropriate, or an estimate of the number of independent observations.
+
+```{r}
+load('data/tworatedata.rda')
+baseline <- function(reachvector,blidx) reachvector - mean(reachvector[blidx], na.rm=TRUE)
+tworatedata[,4:ncol(tworatedata)] <- apply(tworatedata[,4:ncol(tworatedata)], FUN=baseline, MARGIN=c(2), blidx=c(17:32))
+reaches <- apply(tworatedata[4:ncol(tworatedata)], FUN=mean, MARGIN=c(1), na.rm=TRUE)
+schedule <- tworatedata$schedule
+```
+
+## Model Functions
+
+Now we set up the models. Here is the model function for the two-rate model that you've seen before:
+
+```{r}
+twoRateModel <- function(par, schedule) {
+  
+  # thse values should be zero at the start of the loop:
+  Et <- 0 # previous error: none
+  St <- 0 # state of the slow process: aligned
+  Ft <- 0 # state of the fast process: aligned
+  
+  # we'll store what happens on each trial in these vectors:
+  slow <- c()
+  fast <- c()
+  total <- c()
+  
+  # now we loop through the perturbations in the schedule:
+  for (t in c(1:length(schedule))) {
+    
+    # first we calculate what the model does
+    # this happens before we get visual feedback about potential errors
+    St <- (par['Rs'] * St) - (par['Ls'] * Et)
+    Ft <- (par['Rf'] * Ft) - (par['Lf'] * Et)
+    Xt <- St + Ft
+    
+    # now we calculate what the previous error will be for the next trial:
+    if (is.na(schedule[t])) {
+      Et <- 0
+    } else {
+      Et <- Xt + schedule[t]
+    }
+    
+    # at this point we save the states in our vectors:
+    slow <- c(slow, St)
+    fast <- c(fast, Ft)
+    total <- c(total, Xt)
+    
+  }
+  
+  # after we loop through all trials, we return the model output:
+  return(data.frame(slow,fast,total))
+  
+}
+```
+
+And we'll make one for the one-rate model as well. This will essentially be a simplification:
+
+```{r}
+oneRateModel <- function(par, schedule) {
+  
+  # thse values should be zero at the start of the loop:
+  Et <- 0 # previous error: none
+  Pt <- 0 # state of the process: aligned
+  
+  # we'll store what happens on each trial in these vectors:
+  total <- c()
+  
+  # now we loop through the perturbations in the schedule:
+  for (t in c(1:length(schedule))) {
+    
+    # first we calculate what the model does
+    # this happens before we get visual feedback about potential errors
+    Pt <- (par['R'] * Pt) - (par['L'] * Et)
+    
+    # now we calculate what the previous error will be for the next trial:
+    if (is.na(schedule[t])) {
+      Et <- 0
+    } else {
+      Et <- Pt + schedule[t]
+    }
+    
+    # at this point we save the states in our vectors:
+    total <- c(total, Pt)
+    
+  }
+  
+  # after we loop through all trials, we return the model output:
+  return(data.frame(total))
+  
+}
+```
+
+## Error Functions
+
+The two-rate loss function should look familiar:
+
+```{r}
+twoRateMSE <- function(par, schedule, reaches) {
+  
+  bigError <- mean(schedule^2, na.rm=TRUE) * 10
+  
+  # learning and retention rates of the fast and slow process are constrained:
+  if (par['Ls'] > par['Lf']) {
+    return(bigError)
+  }
+  if (par['Rs'] < par['Rf']) {
+    return(bigError)
+  }
+  
+  return( mean((twoRateModel(par, schedule)$total - reaches)^2, na.rm=TRUE) )
+  
+} 
+```
+
+Now let's set up the one-rate model similarly:
+
+```{r}
+oneRateMSE <- function(par, schedule, reaches) {
+  
+  # There are no additional constraints to implement
+  return( mean((oneRateModel(par, schedule)$total - reaches)^2, na.rm=TRUE) )
+  
+} 
+```
+
+## Model fitting
+
+Now we can fit both models, and first use grid search:
+
+```{r}
+library(optimx)
+
+nvals <- 7
+parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
+
+searchgrid <- expand.grid('Ls'=parvals,
+                          'Lf'=parvals,
+                          'Rs'=parvals,
+                          'Rf'=parvals)
+# evaluate starting positions:
+MSE <- apply(searchgrid, FUN=twoRateMSE, MARGIN=c(1), schedule=schedule, reaches=reaches)
+# run optimx on the best starting positions:
+allfits <- do.call("rbind",
+                   apply( searchgrid[order(MSE)[1:5],],
+                          MARGIN=c(1),
+                          FUN=optimx,
+                          fn=twoRateMSE,
+                          method='L-BFGS-B',
+                          lower=c(0,0,0,0),
+                          upper=c(1,1,1,1),
+                          schedule=schedule,
+                          reaches=reaches ) )
+# pick the best fit:
+TRwin <- allfits[order(allfits$value)[1],]
+print(TRwin[1:5])
+```
+
+For the one-rate model:
+
+```{r}
+nvals <- 9
+parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
+
+searchgrid <- expand.grid('L'=parvals,
+                          'R'=parvals)
+# evaluate starting positions:
+MSE <- apply(searchgrid, FUN=oneRateMSE, MARGIN=c(1), schedule=schedule, reaches=reaches)
+# run optimx on the best starting positions:
+allfits <- do.call("rbind",
+                   apply( searchgrid[order(MSE)[1:5],],
+                          MARGIN=c(1),
+                          FUN=optimx,
+                          fn=oneRateMSE,
+                          method='L-BFGS-B',
+                          lower=c(0,0,0,0),
+                          upper=c(1,1,1,1),
+                          schedule=schedule,
+                          reaches=reaches ) )
+# pick the best fit:
+ORwin <- allfits[order(allfits$value)[1],]
+print(ORwin[1:3])
+```
+
+Let's plot both of them in one figure. the purple line is the two-rate model's output, while the orange line is the one-rate model's output:
+
+```{r}
+TRmodel <- twoRateModel(par=unlist(TRwin[,c(1:4)]), schedule=schedule)
+ORmodel <- oneRateModel(par=unlist(ORwin[,c(1:2)]), schedule=schedule)
+plot(reaches,type='l',col='#333333',xlab='trial',ylab='reach deviation [deg]',xlim=c(0,165),ylim=c(-35,35),bty='n',ax=F)
+lines(c(1,33,33,133,133,145,145),c(0,0,30,30,-30,-30,0),col='#AAAAAA')
+lines(c(145,164),c(0,0),col='#AAAAAA',lty=2)
+lines(TRmodel$slow,col='blue',lty=2)
+lines(TRmodel$fast,col='red',lty=2)
+lines(TRmodel$total,col='purple')
+lines(ORmodel$total,col='orange')
+axis(1,c(1,32,132,144,164),las=2)
+axis(2,c(-30,-15,0,15,30))
+```
+
+Just intuitively, it looks like the one-rate model is doing a lot worse than the two-rate model. We're supposed to be able to quantify this now, using the AIC from the previous tutorial. But as the title of the tutorial suggests; are we sure we know what the "number of independent observations" is that is necessary to calculate the AIC? There are two numbers that we know. The number of trials, 164, that you can see in the plot above, and the number of participants, 17, that we can look up if we check `str(tworatedata)`. Neither of those is meant though.
+
+# Indepence of Observations in a Time Series
+
+First of all, the model doesn't actually get to see the individual participants, as we only feed it the average reach deviation per trial. So that one is off. But what about the number of trials, it does get all of those, right?
+
+OK, well, let's try. We'll make a function to calculate AIC. The arguments MSE and k can be vectors and describe properties of models (the mean squared error and the number of parameters). The argument N is always a single number, as it describes a property of the dataset that the models have been fit to.
+
+```{r}
+AIC <- function(MSE, k, N) {
+  return( (N * log(MSE)) + (2 * k) )
+}
+```
+
+And we extract the MSE values:
+
+```{r}
+MSEs <- c('one-rate' = as.numeric(ORwin[3]),
+          'two-rate' = as.numeric(TRwin[5]))
+```
+
+
+Now we can get the AIC for both models in one stroke:
+
+```{r}
+print(AICs <- AIC(MSE=MSEs, k=c(2,4), N=164))
+```
+
+And we can convert them to relative log likelihoods with this function:
+
+```{r}
+relativeLikelihood <- function(crit) {
+  return( exp( ( min( crit  ) - crit  ) / 2 ) )
+}
+```
+
+Which we do here:
+
+```{r}
+relativeLikelihood(AICs)
+```
+
+The relative likelihood is much, much lower for the one-rate model as compared to the two-rate model. We expected that, but is it correct?
+
+The thing with a time-series is that subsequent measurements are always highly correlated. So much so, that it's pretty certain that two consecutive samples are definitely not independent. In the two- and one-rate models itself this is even directly implemented (as retention).
+
+# ACF-lag outside 95% confidence interval
+
+One way to estimate the number of independent observations in a time series is by taking the autocorrelation of the signal with lagged version of itself, increasing the lag by 1 trial on each iteration, and take the lag just before the autocorrelation goes below the (one-sided) 95% confidence interval, based on a shuffled version of the data. You then take the number of data points, and divide that by that lag.
+
+Here is a function implementing this algorithm:
+
+```{r}
+timeSeriesIndObs <- function(series) {
+  
+  Neff_found <- FALSE
+  
+  critlag <- 1
+  
+  Neff <- length(series)
+  
+  while (!Neff_found) {
+    
+    lagpoints <- length(series) - critlag
+    
+    point_one <- series[c(1:lagpoints)]
+    point_two <- series[c((critlag+1):length(series))]
+    
+    lag_cor <- cor(point_one, point_two)
+    
+    shuffle_cor <- rep(NA, 1000)
+    
+    for (bootstrap in c(1:1000)) {
+      
+      shuffle_cor[bootstrap] <- cor(point_one, sample(point_two))
+      
+    }
+    
+    upperlimit <- quantile(shuffle_cor, probs=0.975) # this is a two-sided confidence interval
+                                                     # probs=0.95 for one-sided... but does that make sense?
+    
+    if (lag_cor < upperlimit) {
+      
+      return( length(series) / max((critlag - 1), 1) )
+      
+    }
+    
+    critlag <- critlag + 1
+    
+    # lag can only go up to a certain value, determined by the length of the sequence
+    if (critlag > (length(series) - 2)) {
+      
+      return( 1 ) # or length(reaches) - 1?
+      
+    }
+    
+  }
+  
+  # what now? I think the function should never end up here...
+  
+  stop('timeSeriesIndObs() does not work as expected\n')
+  
+}
+
+```
+
+So let's calculate the number of independ observations in our data set:
+
+```{r}
+print(Neff <- timeSeriesIndObs(reaches))
+```
+
+So we have _"only"_ 6.56 independent observations in the dataset. Let's run the AIC and likelihood functions again:
+
+```{r}
+print(ioAICs <- AIC(MSE=MSEs, k=c(2,4), N=Neff))
+```
+
+They're a lot closer in terms of AIC, but will this change the relative likelihood?
+
+```{r}
+relativeLikelihood(ioAICs)
+```
+
+Not really. The one-rate model is still a much worse fit than the two-rate model. However, the change in the relative likelihood of the one-rate model is enormous, so it might have turned out differently.
+
 
 
 # Other
 
-rho-based estimate for non-time series data with less than random sampling
+Rho-based estimate for non-time series data with less than random sampling?
