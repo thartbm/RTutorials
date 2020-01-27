@@ -125,5 +125,152 @@ print(c('AIC'=AIC, 'BIC'=BIC,'Hannan-Quinn'=HQC))
 
 Of course, you could debate if those 50 observations are really independent.
 
+## Take away
+
+You should now have some sense of what a likelihood is and how you can maximize the likelihood of a model given the data.
+
 # Two-Rate Model
 
+And we will now implement this for a somewhat harder problem: the two-rate model. Here, there is a distribution for every trial. So we can optimize the likelihood if, in addition to the mean reach deviation in each trial, we also have the standard deviation of reach deviations on each trial.
+
+Let's set up that part of the solution:
+
+```{r}
+load('data/tworatedata.rda')
+baseline <- function(reachvector,blidx) reachvector - mean(reachvector[blidx], na.rm=TRUE)
+tworatedata[,4:ncol(tworatedata)] <- apply(tworatedata[,4:ncol(tworatedata)], FUN=baseline, MARGIN=c(2), blidx=c(17:32))
+mu <- apply(tworatedata[4:ncol(tworatedata)], 
+            FUN=mean, 
+            MARGIN=c(1), 
+            na.rm=TRUE)
+sigma <- apply(tworatedata[4:ncol(tworatedata)]-mu,
+               FUN=sd,
+               MARGIN=c(1),
+               na.rm=TRUE )
+
+reaches <- data.frame ( 'mean' = mu,
+                        'sd'   = sigma )
+schedule <- tworatedata$schedule
+
+
+# This holds when the distribution is equally wide on every trial:
+# sigma <- sd(as.matrix(tworatedata[4:ncol(tworatedata)] - mu), na.rm=T )
+# reaches <- list( 'mean' = mu,
+#                  'sd'   = sigma )
+# Note that sd is not a single value.
+```
+
+Let's see what the data frame `reaches` looks like:
+
+```{r}
+str(reaches)
+```
+
+Our model function will still be the same:
+
+```{r}
+twoRateModel <- function(par, schedule) {
+  
+  # thse values should be zero at the start of the loop:
+  Et <- 0 # previous error: none
+  St <- 0 # state of the slow process: aligned
+  Ft <- 0 # state of the fast process: aligned
+  
+  # we'll store what happens on each trial in these vectors:
+  slow <- c()
+  fast <- c()
+  total <- c()
+  
+  # now we loop through the perturbations in the schedule:
+  for (t in c(1:length(schedule))) {
+    
+    # first we calculate what the model does
+    # this happens before we get visual feedback about potential errors
+    St <- (par['Rs'] * St) - (par['Ls'] * Et)
+    Ft <- (par['Rf'] * Ft) - (par['Lf'] * Et)
+    Xt <- St + Ft
+    
+    # now we calculate what the previous error will be for the next trial:
+    if (is.na(schedule[t])) {
+      Et <- 0
+    } else {
+      Et <- Xt + schedule[t]
+    }
+    
+    # at this point we save the states in our vectors:
+    slow <- c(slow, St)
+    fast <- c(fast, Ft)
+    total <- c(total, Xt)
+    
+  }
+  
+  # after we loop through all trials, we return the model output:
+  return(data.frame(slow,fast,total))
+  
+}
+```
+
+
+But the criterion function will be different:
+
+```{r}
+twoRateLikelihood <- function(par, schedule, reaches) {
+  
+  bigError <- 0
+  
+  # learning and retention rates of the fast and slow process are constrained:
+  if (par['Ls'] > par['Lf']) {
+    return(bigError)
+  }
+  if (par['Rs'] < par['Rf']) {
+    return(bigError)
+  }
+  # the following line works both is sd is a single value or a vector:
+  likes <- dnorm((twoRateModel(par, schedule)$total - reaches$mean), mean=0, sd=reaches$sd)
+  # print(likes)
+  return( prod(likes) )
+  
+} 
+```
+
+And now we can fit the model by maximizing it's likelihood, here simply with `optim()`:
+
+```{r}
+nvals <- 7
+parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
+
+searchgrid <- expand.grid('Ls'=parvals,
+                          'Lf'=parvals,
+                          'Rs'=parvals,
+                          'Rf'=parvals)
+
+# evaluate starting positions:
+Likes <- apply(searchgrid, FUN=twoRateLikelihood, MARGIN=c(1), schedule=schedule, reaches=reaches)
+
+# run optimx on the best starting positions:
+
+control <- list()
+control$fnscale <- -1
+
+allfits <- do.call("rbind",
+                   apply( searchgrid[order(Likes, decreasing = T)[1:10],],
+                          MARGIN=c(1),
+                          FUN=optim,
+                          fn=twoRateLikelihood,
+                          method='L-BFGS-B',
+                          lower=c(0,0,0,0),
+                          upper=c(1,1,1,1),
+                          schedule=schedule,
+                          reaches=reaches,
+                          control=control ) )
+# pick the best fit:
+win <- allfits[order(as.numeric(allfits[,2]), decreasing = T),]
+print(win[1])
+```
+
+
+# Double-Drift Reset Points
+
+Another possibility is that our likelihood function takes some irregular shape that is not described by an existing function, or when it occurs in multiple dimensions. This is the case for the Double-Drift Reset Points data that we covered in the Model Evaluation tutorial. At least, the data is best described as a two-dimensional distribution, which might have an irregular shape. I'll try to solve that here.
+
+It could be seen as the product of two likelihood functions, but we might have to rotate the data with PCA first, so that the two likelihood functions operate on one axis only (or... mostly). 
