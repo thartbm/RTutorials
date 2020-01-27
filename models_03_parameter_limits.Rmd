@@ -53,7 +53,7 @@ tworatedata[,4:ncol(tworatedata)] <- apply(tworatedata[,4:ncol(tworatedata)], FU
 Now we'll get the median reach deviations across participants, and plot them.
 
 ```{r}
-reaches <- apply(tworatedata[4:ncol(tworatedata)], FUN=median, MARGIN=c(1), na.rm=TRUE)
+reaches <- apply(tworatedata[4:ncol(tworatedata)], FUN=mean, MARGIN=c(1), na.rm=TRUE)
 plot(reaches,type='p',xlab='trial',ylab='reach deviation [deg]',xlim=c(0,165),ylim=c(-35,35),bty='n',ax=F)
 lines(c(1,33,33,133,133,145,145),c(0,0,30,30,-30,-30,0),col='#AAAAAA')
 lines(c(145,164),c(0,0),col='#AAAAAA',lty=2)
