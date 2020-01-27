@@ -243,7 +243,7 @@ twoRateLikelihood <- function(par, schedule, reaches) {
   if ( ((par['Rf'] - par['Lf'] + par['Rs'] - par['Ls']) + q^0.5) >= 2 ) {
     return(lowLikelihood)
   }
-  
+
   # the following line works both if sd is a single value or a vector:
   return( prod( dnorm((twoRateModel(par, schedule)$total - reaches$mean), mean=0, sd=reaches$sd) ) )
   

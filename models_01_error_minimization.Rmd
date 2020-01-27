@@ -129,11 +129,17 @@ One way to overcome the disadvantages of MAE, is to use something like MAE for l
 
 ### R Squared
 
-This is not your regular correlation coefficient, but:
+This is related to a regular correlation coefficient, or better the residual variance in ANOVAs:
 
 $R^2 = 1 - \frac{MSE(model)}{MSE(mean)}$
 
 That is: how good is the model relative to a baseline model that just predicts the mean of the data? Your model could be worse than the mean, so there's no lower limit to this value. However, usually, we make somewhat smart models, and those are going to be better than the mean. In that case, MSE(model) will be less than MSE(mean), and $R^2$ will be between 0 and 1, and either way better models will have a higher $R^2$. That also means that it shouldn't be minimized, but maximized (multiply by -1 in functions that minimize something).
+
+### Adjusted R Squared
+
+_To be written..._
+
+$R_{adj}^2 = \frac{MSE(mean)-MSE(model)}{MSE(mean)}$ Is this correct...? **CHECK!**
 
 ### Other metrics
 
