@@ -13,7 +13,110 @@ library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
 
-Most model evaluation criteria don't work with minimizing a loss function (like MSE) but by maximizing the likelihood of the model. If you'd like to calculate a BIC, AICc or Hannan-Quinn criterion for your model, it needs to be fit based on maximizing the likelihood.
+Most model evaluation criteria don't work with minimizing a loss function (like MSE) but by maximizing the likelihood of the model. If you'd like to calculate a BIC, AICc or Hannan-Quinn criterion for your model - and probably others, you need the likelihood of the model.
 
-_Note:_ This does not mean that your previous model fits are wrong. The likelihood of the model can be shown to be at it's maximum at the same parameters where the error is minimized. It's just that you can only use AIC for model evaluation.
+_Note 1:_ This does not mean that your previous model fits are wrong. The likelihood of the model can be shown to be at it's maximum at the same parameters where the error is minimized. It's just that you can only use AIC for model evaluation.
 
+_Note 2:_ I suppose it might be possible to fit a model using MSE minimization and then calculate the likelihood of the fitted model afterwards.
+
+# Simple example of likelihood
+
+This is going to be an extremely simple model. We're taking the sepal length of setosa irisses from the `iris` dataset:
+
+```{r}
+SSL <- iris$Sepal.Length[which(iris$Species == 'setosa')]
+str(SSL)
+```
+
+Now, these 50 numbers can be described as a fairly normal distribution, as seen in histogram and QQ-plot:
+
+```{r}
+par(mfrow=c(1,2))
+hist(SSL)
+qqnorm(SSL, bty='n')
+```
+
+That means that the mean and standard deviation give a good description of the distribution:
+
+```{r}
+print(c('mean'=mean(SSL), 'sd'=sd(SSL)))
+```
+
+Our simple model has no other information than these two numbers. So if we ask it to predict what any new setosa's sepal length will be, the best answer is the mean: 5.006. But now, we can also ask how likely it is to observe this value, given what we know. For this we use the probability density function:
+
+```{r}
+plot(seq(3,7,0.001),dnorm(seq(3,7,0.001), mean=mean(SSL), sd=sd(SSL)), type='l',xlab='setosa sepal length', ylab='probability density', bty='n')
+```
+
+Notice that the curve exceeds 1. How can there be a probability larger than 1? That's because this is not a probability function, but a probability _density_ function. (It's impossible to have an actual probability function, since the chance of any exact value is infinitely small, best described as 0.) We could convert this to probabilities by slicing the curve into very tiny bins, and taking the surface of the bin, as the total surface is supposed to be 1. However, for our purposes we can apparently just use probability density, as it provides a _relative_ likelihood (within some range) of a particular value occurring as compared to other values.
+
+Let's say that we only get the first ten of the 50 observations, and we can check the likelihood of those obervations relative to the whole dataset.
+
+```{r}
+print(data.frame('SSL'=SSL[1:10], 'likelihood'=dnorm(SSL[1:10], mean=mean(SSL), sd=sd(SSL))))
+```
+
+As you can see, closer to 5.006 the likelihood is highest.
+
+Now, we could make two simple models, one based on MSE minimization and based on likelihood maximization to find the best model. Both _should_ find the same solution. Let's see.
+
+Here's a function that returns a mean square error:
+
+```{r}
+SSL_MSE <- function(par, data) {
+  
+  return( mean( (data-par)^2, na.rm=TRUE ) )
+  
+}
+```
+
+And a function that returs the likelihood:
+
+```{r}
+SSL_Likelihood <- function(par, data) {
+  
+  return( dnorm(par, mean=mean(data), sd=sd(data)) )
+  
+}
+```
+
+We can use `optim()` to find the best parameter estimate (`par`) for both, as `optim()` allows to set control$fncale to a negative value. A similar option is available for `optimx()`.
+
+```{r}
+control <- list()
+control$fnscale <- -1
+```
+
+Here we fit it with the MSE:
+
+```{r}
+optim(par=4, fn=SSL_MSE, data=SSL, method='Brent', lower=0, upper=10)
+```
+
+And for the Likelihood:
+
+```{r}
+print(Lopt <- optim(par=4, fn=SSL_Likelihood, data=SSL, method='Brent', lower=0, upper=10, control=control))
+```
+
+So both methods find the exact same parameter values. Except for the likelihood we can now also calculate BIC and Hannan-Quinn:
+
+```{r}
+
+L <- Lopt$value
+k <- 1
+N <- 50
+
+#-- AIC --#
+AIC <- (2 * k) - (2 * log(L))
+
+#-- BIC --#
+BIC <- log(N)*k - (2 * log(L)) # L based
+  
+#-- Hannan-Quinn --#
+HQC <- (-2 * L) + (2 * k * log(log(N))) # L based
+
+print(c('AIC'=AIC, 'BIC'=BIC,'Hannan-Quinn'=HQC))
+```
+
+Of course, you could debate if those 50 observations are really independent.
