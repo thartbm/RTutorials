@@ -211,24 +211,41 @@ twoRateModel <- function(par, schedule) {
 ```
 
 
-But the criterion function will be different:
+But the criterion function will be different. It should return a likelihood now, which is done in the last line of code and it is a somewhat complicate line. It can be done in a single line, because `dnorm()` takes vectorized input for any of its arguments (make sure that if two or more arguments are a vector, that they are of equal length, not sure what would happen if that is not the case).
+
+Also, we now add some other criteria that return our lowLikelihood. These are to ensure that the returned model is "stable".
 
 ```{r}
 twoRateLikelihood <- function(par, schedule, reaches) {
   
-  bigError <- 0
+  lowLikelihood <- 0
   
   # learning and retention rates of the fast and slow process are constrained:
   if (par['Ls'] > par['Lf']) {
-    return(bigError)
+    return(lowLikelihood)
   }
   if (par['Rs'] < par['Rf']) {
-    return(bigError)
+    return(lowLikelihood)
   }
-  # the following line works both is sd is a single value or a vector:
-  likes <- dnorm((twoRateModel(par, schedule)$total - reaches$mean), mean=0, sd=reaches$sd)
-  # print(likes)
-  return( prod(likes) )
+  
+  # my own constraint:
+  # if ((par['Ls']+par['Lf']) > 1) {
+  #   return(lowLikelihood)
+  # }
+  
+  # stability constraints:
+  if ( ( ( (par['Rf'] - par['Lf']) * (par['Rs'] - par['Ls']) ) - (par['Lf'] * par['Ls'])) <= 0 ) {
+    return(lowLikelihood)
+  }
+  
+  p <- par['Rf']-par['Lf']-par['Rs']+par['Ls']
+  q <- ( p^2 + (4 * par['Lf'] * par['Ls']) )
+  if ( ((par['Rf'] - par['Lf'] + par['Rs'] - par['Ls']) + q^0.5) >= 2 ) {
+    return(lowLikelihood)
+  }
+  
+  # the following line works both if sd is a single value or a vector:
+  return( prod( dnorm((twoRateModel(par, schedule)$total - reaches$mean), mean=0, sd=reaches$sd) ) )
   
 } 
 ```
@@ -236,7 +253,7 @@ twoRateLikelihood <- function(par, schedule, reaches) {
 And now we can fit the model by maximizing it's likelihood, here simply with `optim()`:
 
 ```{r}
-nvals <- 7
+nvals <- 9
 parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
 
 searchgrid <- expand.grid('Ls'=parvals,
@@ -245,17 +262,17 @@ searchgrid <- expand.grid('Ls'=parvals,
                           'Rf'=parvals)
 
 # evaluate starting positions:
-Likes <- apply(searchgrid, FUN=twoRateLikelihood, MARGIN=c(1), schedule=schedule, reaches=reaches)
+Likelihoods <- apply(searchgrid, FUN=twoRateLikelihood, MARGIN=c(1), schedule=schedule, reaches=reaches)
+
+# we need to tell optimx to maximize the likelihood:
+control <- list()
+control$maximize <- TRUE
 
 # run optimx on the best starting positions:
-
-control <- list()
-control$fnscale <- -1
-
 allfits <- do.call("rbind",
-                   apply( searchgrid[order(Likes, decreasing = T)[1:10],],
+                   apply( searchgrid[order(Likelihoods, decreasing = T)[1:10],],
                           MARGIN=c(1),
-                          FUN=optim,
+                          FUN=optimx,
                           fn=twoRateLikelihood,
                           method='L-BFGS-B',
                           lower=c(0,0,0,0),
@@ -263,11 +280,43 @@ allfits <- do.call("rbind",
                           schedule=schedule,
                           reaches=reaches,
                           control=control ) )
+
 # pick the best fit:
-win <- allfits[order(as.numeric(allfits[,2]), decreasing = T),]
-print(win[1])
+win <- allfits[order(allfits$value, decreasing = T)[1],]
+print(par <- unlist(win[,1:4]))
 ```
 
+Let's see the quality of the fit:
+
+```{r}
+model <- twoRateModel(par=par, schedule=schedule)
+plot(reaches$mean,type='l',col='#333333',xlab='trial',ylab='reach deviation [deg]',xlim=c(0,165),ylim=c(-35,35),bty='n',ax=F)
+lines(c(1,33,33,133,133,145,145),c(0,0,30,30,-30,-30,0),col='#AAAAAA')
+lines(c(145,164),c(0,0),col='#AAAAAA',lty=2)
+lines(model$slow,col='blue')
+lines(model$fast,col='red')
+lines(model$total,col='purple')
+axis(1,c(1,32,132,144,164),las=2)
+axis(2,c(-30,-15,0,15,30))
+```
+
+Why does that look worse than MSE?
+
+```{r}
+MSEpar <- c('Ls'=0.07296962,
+            'Lf'=0.42197434,
+            'Rs'=0.99858527,
+            'Rf'=0.68592189)
+
+MSE_likelihood <- twoRateLikelihood(par=MSEpar, schedule=schedule, reaches=reaches)
+LIK_likelihood <- twoRateLikelihood(par=par, schedule=schedule, reaches=reaches)
+print(likelihoods <- c('MSE'=MSE_likelihood, 'L'=LIK_likelihood))
+
+```
+
+The likelihood is actually lower for the maximum likelihood algorithm?
+
+It's higher now that I've included some of Thomas' stability constraints, but still not the same. Why?
 
 # Double-Drift Reset Points
 
