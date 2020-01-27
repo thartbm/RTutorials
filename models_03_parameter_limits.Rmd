@@ -228,7 +228,7 @@ optimx(par = par,
        reaches = reaches)
 ```
 
-That works, but doesn't seem to change all that much (although notice that Rs is now exactly 1). It does omit the Nelder-Mead fit... maybe that can't deal with limits on parameters?
+That works, but doesn't seem to change all that much. It does omit the Nelder-Mead fit... maybe that can't deal with limits on parameters?
 
 # Benchmarking
 
@@ -259,7 +259,7 @@ res <- microbenchmark('Nelder-Mead' = optimx( par = par,
 print(res)
 ```
 
-In this table you mostly want to look at the mean and median columns, as they would be most predictive of differences in runtime between different methods of fitting. Nelder-Mead is consistently slower than the others on my machine (like the author of optim warned us), and BFGS might be somewhat faster in this case. However, they're all comparable for our purposes (finish within a second), and by using `L-BFGS-B` (whatever that stands for) we don't have to check the limits for parameters in our own code.
+In this table you mostly want to look at the mean and median columns, as they would be most predictive of differences in runtime between different methods of fitting. Unfortunately, the results vary a lot per run in this case, perhaps because times=20 is too low for reliable results? Nelder-Mead is usually slower than the others on my machine (like the author of optim warned us), and BFGS might be somewhat faster in this case. However, they're all comparable for our purposes (finish within a second), and by using `L-BFGS-B` (whatever that stands for) we don't have to check the limits for parameters in our own code.
 
 If you don't have `ggplot2` installed, you can use boxplot for a visualization:
 
