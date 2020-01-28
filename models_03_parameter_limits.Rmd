@@ -305,7 +305,7 @@ win <- allfits[order(allfits$value)[1],]
 print(win[1:5])
 ```
 
-The MSE `value` is very similar to the one we had before without grid search (5.28) and so are the parameter values. Perhaps this means we didn't need grid search after all, but with this model there is a 4-dimensional parameter space and no obvious way to see if and where local minima are, so it is better to do grid search.
+The MSE `value` is very similar to the one we had before without grid search, and so are the parameter values. Perhaps this means we didn't need grid search after all, but with this model there is a 4-dimensional parameter space and no obvious way to see if and where local minima are, so it is better to do grid search.
 
 ## Plot model
 
