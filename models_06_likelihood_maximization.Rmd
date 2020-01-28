@@ -173,6 +173,37 @@ Let's see what the data frame `reaches` looks like:
 str(reaches)
 ```
 
+This determines a 2-dimensional likelihood "landscape", and our model fit will have stay on the top ridge of that landscape. Here's a visualization of that landscape:
+
+```{r}
+likelihoods <- matrix(data=NA, nrow=164, ncol=91)
+for (trial in c(1:length(reaches$mean))) {
+  likelihoods[trial,] <- dnorm(c(-45:45), mean=reaches$mean[trial], sd=reaches$sd)
+}
+
+# this bit copied from stack overflow:
+# https://stackoverflow.com/questions/29786380/standardizing-color-scale-persp-plots-in-panel-r
+nrz <- 164
+ncz <- 91
+# Create a function interpolating colors in the range of specified colors
+jet.colors <- colorRampPalette( c("white", "purple") )
+# Generate the desired number of colors from this palette
+nbcol <- 100
+color <- jet.colors(nbcol)
+# Compute the z-value at the facet centres
+zfacet <- likelihoods[-1, -1] + likelihoods[-1, -ncz] + likelihoods[-nrz, -1] + likelihoods[-nrz, -ncz]
+# Recode facet z-values into color indices
+facetcol <- cut(zfacet, nbcol)
+
+
+persp(c(1:164), c(-45:45), likelihoods*300, phi = 50, theta = 0,
+  xlab = "trial", ylab = "reach deviation", zlab='likelihood',
+  main = "likelihood landscape for two-rate model", col=color[facetcol], shade=0.2, border=NA,
+  scale = FALSE
+)
+```
+
+
 Our model function will still be the same:
 
 ```{r}
@@ -318,6 +349,7 @@ MSEpar <- c('Ls'=0.07297697,
             'Rs'=0.99856856,
             'Rf'=0.68608967)
 MSEmodel <- twoRateModel(par=MSEpar, schedule=schedule)
+
 # this is the model just fitted above:
 model <- twoRateModel(par=par, schedule=schedule)
 plot(reaches$mean,type='l',col='#333333',xlab='trial',ylab='reach deviation [deg]',xlim=c(0,165),ylim=c(-35,35),bty='n',ax=F)
@@ -331,7 +363,7 @@ axis(1,c(1,32,132,144,164),las=2)
 axis(2,c(-30,-15,0,15,30))
 ```
 
-They look the same, are they?
+They look the same, but are they?
 
 ```{r}
 MSE_likelihood <- twoRateLikelihood(par=MSEpar, schedule=schedule, reaches=reaches, checkStability = F)
