@@ -10,7 +10,7 @@ author: Marius 't Hart
 
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
-opts_chunk$set(comment='', eval=TRUE)
+opts_chunk$set(comment='', eval=FALSE)
 ```
 
 Most model evaluation criteria don't work with minimizing a loss function (like MSE) but by maximizing the likelihood of the model. If you'd like to calculate a BIC, AICc or Hannan-Quinn criterion for your model - and probably others, you need the likelihood of the model.
@@ -263,7 +263,7 @@ twoRateLikelihood <- function(par, schedule, reaches, checkStability=FALSE) {
   }
 
   # the following line works both if sd is a single value or a vector:
-  L <- prod( dnorm((twoRateModel(par, schedule)$total - reaches$mean), mean=0, sd=reaches$sd) )^(1/length(reaches$mean))
+  L <- prod( dnorm((twoRateModel(par, schedule)$total - reaches$mean), mean=0, sd=reaches$sd)^(1/length(reaches$mean)) )
   # print(L)
   return( L )
   
