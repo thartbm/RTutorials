@@ -10,12 +10,12 @@ author: Marius 't Hart
 
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
-opts_chunk$set(comment='', eval=FALSE)
+opts_chunk$set(comment='', eval=TRUE)
 ```
 
 Most model evaluation criteria don't work with minimizing a loss function (like MSE) but by maximizing the likelihood of the model. If you'd like to calculate a BIC, AICc or Hannan-Quinn criterion for your model - and probably others, you need the likelihood of the model.
 
-_Note 1:_ This does not mean that your previous model fits are wrong. The likelihood of the model can be shown to be at it's maximum at the same parameters where the error is minimized. It's just that you can only use AIC for model evaluation.
+_Note 1:_ This does not mean that your previous model fits are wrong. The likelihood of the model [can be shown](https://stats.stackexchange.com/questions/16508/calculating-likelihood-from-rmse) to be at it's maximum at the same parameters where the error is minimized. It's just that you can only use AIC for model evaluation.
 
 _Note 2:_ I suppose it might be possible to fit a model using MSE minimization and then calculate the likelihood of the fitted model afterwards.
 
@@ -143,20 +143,27 @@ mu <- apply(tworatedata[4:ncol(tworatedata)],
             FUN=mean, 
             MARGIN=c(1), 
             na.rm=TRUE)
-sigma <- apply(tworatedata[4:ncol(tworatedata)]-mu,
-               FUN=sd,
-               MARGIN=c(1),
-               na.rm=TRUE )
 
-reaches <- data.frame ( 'mean' = mu,
-                        'sd'   = sigma )
+# This is for individual likelihoods in each trial,
+# it might be a better way to fit the processes, 
+# but it's less comparable to MSE, as it effectively
+# weighs errors on certain trials differently from others
+
+# sigma <- apply(tworatedata[4:ncol(tworatedata)]-mu,
+#                FUN=sd,
+#                MARGIN=c(1),
+#                na.rm=TRUE )
+
+# This holds when the distribution is equally wide on every trial:
+# (and should be more comparable to MSE)
+sigma <- sd(as.matrix(tworatedata[4:ncol(tworatedata)] - mu), na.rm=T )
+
 schedule <- tworatedata$schedule
 
 
-# This holds when the distribution is equally wide on every trial:
-# sigma <- sd(as.matrix(tworatedata[4:ncol(tworatedata)] - mu), na.rm=T )
-# reaches <- list( 'mean' = mu,
-#                  'sd'   = sigma )
+
+reaches <- list( 'mean' = mu,
+                 'sd'   = sigma )
 # Note that sd is not a single value.
 ```
 
@@ -215,16 +222,23 @@ But the criterion function will be different. It should return a likelihood now,
 
 Also, we now add some other criteria that return our lowLikelihood. These are to ensure that the returned model is "stable".
 
+Since most (all?) likelihoods we will get will be below 1, taking the product of many of them will result in a very low number. Differences between those likelihoods of the whole series with different parameters will soon become so small that the algorithm will consider them insignificant and stop, while least square errors algorithms will continue. That's why, in the last line, I also raise the likelihood to the power if one over the length of the sequence of likelihoods. This should get the total likelihood back on a scale of approximately 0 to 1, instead of between two very small numbers.
+
 ```{r}
-twoRateLikelihood <- function(par, schedule, reaches) {
+twoRateLikelihood <- function(par, schedule, reaches, checkStability=FALSE) {
   
   lowLikelihood <- 0
   
+  Rf = par["Rf"];
+  Rs = par["Rs"];
+  Lf = par["Lf"];
+  Ls = par["Ls"];
+
   # learning and retention rates of the fast and slow process are constrained:
-  if (par['Ls'] > par['Lf']) {
+  if (Ls > Lf) {
     return(lowLikelihood)
   }
-  if (par['Rs'] < par['Rf']) {
+  if (Rs < Rf) {
     return(lowLikelihood)
   }
   
@@ -233,27 +247,33 @@ twoRateLikelihood <- function(par, schedule, reaches) {
   #   return(lowLikelihood)
   # }
   
-  # stability constraints:
-  if ( ( ( (par['Rf'] - par['Lf']) * (par['Rs'] - par['Ls']) ) - (par['Lf'] * par['Ls'])) <= 0 ) {
-    return(lowLikelihood)
-  }
-  
-  p <- par['Rf']-par['Lf']-par['Rs']+par['Ls']
-  q <- ( p^2 + (4 * par['Lf'] * par['Ls']) )
-  if ( ((par['Rf'] - par['Lf'] + par['Rs'] - par['Ls']) + q^0.5) >= 2 ) {
-    return(lowLikelihood)
+  if (checkStability) {
+    
+    # stability constraints:
+    if ( ( ( (Rf - Lf) * (Rs - Ls) ) - (Lf * Ls)) <= 0 ) {
+      return(lowLikelihood)
+    }
+    
+    p <- Rf - Lf - Rs + Ls
+    q <- ( p^2 + (4 * Lf * Ls) )
+    if ( ((Rf - Lf + Rs - Ls) + (q^0.5)) >= 2 ) {
+      return(lowLikelihood)
+    }
+    
   }
 
   # the following line works both if sd is a single value or a vector:
-  return( prod( dnorm((twoRateModel(par, schedule)$total - reaches$mean), mean=0, sd=reaches$sd) ) )
+  L <- prod( dnorm((twoRateModel(par, schedule)$total - reaches$mean), mean=0, sd=reaches$sd) )^(1/length(reaches$mean))
+  # print(L)
+  return( L )
   
 } 
 ```
 
-And now we can fit the model by maximizing it's likelihood, here simply with `optim()`:
+And now we can fit the model by maximizing it's likelihood, here with `optimx()`:
 
 ```{r}
-nvals <- 9
+nvals <- 5
 parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
 
 searchgrid <- expand.grid('Ls'=parvals,
@@ -262,11 +282,14 @@ searchgrid <- expand.grid('Ls'=parvals,
                           'Rf'=parvals)
 
 # evaluate starting positions:
-Likelihoods <- apply(searchgrid, FUN=twoRateLikelihood, MARGIN=c(1), schedule=schedule, reaches=reaches)
+Likelihoods <- apply(searchgrid, FUN=twoRateLikelihood, MARGIN=c(1), schedule=schedule, reaches=reaches, checkStability=TRUE)
 
 # we need to tell optimx to maximize the likelihood:
+library(optimx)
+
 control <- list()
 control$maximize <- TRUE
+#control$fnscale <- -1 # do not use together with maximize
 
 # run optimx on the best starting positions:
 allfits <- do.call("rbind",
@@ -279,6 +302,7 @@ allfits <- do.call("rbind",
                           upper=c(1,1,1,1),
                           schedule=schedule,
                           reaches=reaches,
+                          checkStability=TRUE,
                           control=control ) )
 
 # pick the best fit:
@@ -286,9 +310,17 @@ win <- allfits[order(allfits$value, decreasing = T)[1],]
 print(par <- unlist(win[,1:4]))
 ```
 
-Let's see the quality of the fit:
+Let's see the quality of the fit, compared to that of the MSE solution from before. They should be equivalent.
 
 ```{r}
+# these parameters are from the fit in the tutorial on independent observations
+# which has the "best" two-rate model function so far... but based on MSE
+MSEpar <- c('Ls'=0.07297697,
+            'Lf'=0.42161167,
+            'Rs'=0.99856856,
+            'Rf'=0.68608967)
+MSEmodel <- twoRateModel(par=MSEpar, schedule=schedule)
+# this is the model just fitted above:
 model <- twoRateModel(par=par, schedule=schedule)
 plot(reaches$mean,type='l',col='#333333',xlab='trial',ylab='reach deviation [deg]',xlim=c(0,165),ylim=c(-35,35),bty='n',ax=F)
 lines(c(1,33,33,133,133,145,145),c(0,0,30,30,-30,-30,0),col='#AAAAAA')
@@ -296,27 +328,21 @@ lines(c(145,164),c(0,0),col='#AAAAAA',lty=2)
 lines(model$slow,col='blue')
 lines(model$fast,col='red')
 lines(model$total,col='purple')
+lines(MSEmodel$total,col='orange',lty=2)
 axis(1,c(1,32,132,144,164),las=2)
 axis(2,c(-30,-15,0,15,30))
 ```
 
-Why does that look worse than MSE?
+They look the same, are they?
 
 ```{r}
-MSEpar <- c('Ls'=0.07296962,
-            'Lf'=0.42197434,
-            'Rs'=0.99858527,
-            'Rf'=0.68592189)
-
-MSE_likelihood <- twoRateLikelihood(par=MSEpar, schedule=schedule, reaches=reaches)
-LIK_likelihood <- twoRateLikelihood(par=par, schedule=schedule, reaches=reaches)
+MSE_likelihood <- twoRateLikelihood(par=MSEpar, schedule=schedule, reaches=reaches, checkStability = F)
+LIK_likelihood <- twoRateLikelihood(par=par, schedule=schedule, reaches=reaches, checkStability = F)
 print(likelihoods <- c('MSE'=MSE_likelihood, 'L'=LIK_likelihood))
 
 ```
 
-The likelihood is actually lower for the maximum likelihood algorithm?
-
-It's higher now that I've included some of Thomas' stability constraints, but still not the same. Why?
+The likelihood is different on the 8th decimal place, which I'm sure we can ignore.
 
 # Double-Drift Reset Points
 
