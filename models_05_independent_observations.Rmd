@@ -115,18 +115,42 @@ oneRateModel <- function(par, schedule) {
 The two-rate loss function should look familiar:
 
 ```{r}
-twoRateMSE <- function(par, schedule, reaches) {
+twoRateMSE <- function(par, schedule, reaches, checkStability=TRUE) {
   
-  bigError <- mean(schedule^2, na.rm=TRUE) * 10
+  bigError <- mean((schedule-mean(reaches))^2, na.rm=TRUE)
   
+  Rf = par["Rf"];
+  Rs = par["Rs"];
+  Lf = par["Lf"];
+  Ls = par["Ls"];
+
   # learning and retention rates of the fast and slow process are constrained:
-  if (par['Ls'] > par['Lf']) {
+  if (Ls > Lf) {
     return(bigError)
   }
-  if (par['Rs'] < par['Rf']) {
+  if (Rs < Rf) {
     return(bigError)
   }
   
+  # my own constraint:
+  # if ((par['Ls']+par['Lf']) > 1) {
+  #   return(lowLikelihood)
+  # }
+  
+  if (checkStability) {
+    
+    # stability constraints:
+    if ( ( ( (Rf - Lf) * (Rs - Ls) ) - (Lf * Ls)) <= 0 ) {
+      return(bigError)
+    }
+    
+    p <- Rf - Lf - Rs + Ls
+    q <- ( p^2 + (4 * Lf * Ls) )
+    if ( ((Rf - Lf + Rs - Ls) + (q^0.5)) >= 2 ) {
+      return(bigError)
+    }
+    
+  }
   return( mean((twoRateModel(par, schedule)$total - reaches)^2, na.rm=TRUE) )
   
 } 
@@ -150,7 +174,7 @@ Now we can fit both models, and first use grid search:
 ```{r}
 library(optimx)
 
-nvals <- 7
+nvals <- 5
 parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
 
 searchgrid <- expand.grid('Ls'=parvals,
@@ -158,7 +182,7 @@ searchgrid <- expand.grid('Ls'=parvals,
                           'Rs'=parvals,
                           'Rf'=parvals)
 # evaluate starting positions:
-MSE <- apply(searchgrid, FUN=twoRateMSE, MARGIN=c(1), schedule=schedule, reaches=reaches)
+MSE <- apply(searchgrid, FUN=twoRateMSE, MARGIN=c(1), schedule=schedule, reaches=reaches, checkStability=TRUE)
 # run optimx on the best starting positions:
 allfits <- do.call("rbind",
                    apply( searchgrid[order(MSE)[1:5],],
@@ -169,7 +193,8 @@ allfits <- do.call("rbind",
                           lower=c(0,0,0,0),
                           upper=c(1,1,1,1),
                           schedule=schedule,
-                          reaches=reaches ) )
+                          reaches=reaches,
+                          checkStability=TRUE ) )
 # pick the best fit:
 TRwin <- allfits[order(allfits$value)[1],]
 print(TRwin[1:5])
@@ -178,7 +203,7 @@ print(TRwin[1:5])
 For the one-rate model:
 
 ```{r}
-nvals <- 9
+nvals <- 5
 parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
 
 searchgrid <- expand.grid('L'=parvals,
