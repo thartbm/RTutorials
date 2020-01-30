@@ -1,3 +1,4 @@
+*.docx
 *.pdf
 *.html
 *.nb.html
@@ -31,4 +32,3 @@ vignettes/*.pdf
 # Shiny token, see https://shiny.rstudio.com/articles/shinyapps.html
 rsconnect/
 .Rproj.user
-stats_10_bayes_factors.nb.html
