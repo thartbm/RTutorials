@@ -1,29 +1,30 @@
 ---
 title: 'Model Fitting: Model Evaluation'
+author: "Marius 't Hart"
 output:
+  word_document: default
   html_notebook: default
+  pdf_document: default
   html_document:
     df_print: paged
-  pdf_document: default
-author: Marius 't Hart
 ---
 
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
-opts_chunk$set(comment='', eval=FALSE)
+opts_chunk$set(comment='', eval=TRUE)
 ```
 
-When you have multiple models that can explain a given dataset to some extent, you'd want to have some way to distinguish between good and bad models. In other words, you want to evaluate your models. Since we've been using MSE so far, there is only one metric for model evaluation that applies (as far as I know): Akaike's Information Criterion.
+When you have multiple models that can explain a given dataset to some extent, you'd want to have some way to distinguish between good and bad models. In other words, you want to evaluate your models. Since we've been using MSE so far, there is only one metric for model evaluation that applies (as far as I know): [Akaike's Information Criterion](https://en.wikipedia.org/wiki/Akaike_information_criterion).
 
 # Double Drift Reset Limit
 
-We will compare 4 models fit to one data set, and then decide that two are comparable and two are not good enough.
+We will compare 4 models fit to one data set. Spoiler alert: we'll find out that two are comparable, one doesn't work and one is not good enough.
 
 What was this experiment about? In this experiment, participants peripherally saw a stimulus that in reality moved straigh forward, but because of added internal motion appears to move at some angle. Which means that people's perception of the location of the stimulus is illusory. The strength of the illusion can be expressed as the size of the angle between the path straight forward and the perceived path. The strength of the illusion varies between participants, but also because of the internal and external motion.
 
-After some time (typically ~2 s), it seems that the illusion resets to the real position of the stimulus. This might simply be because of the passage of time, like in the Necker-cube illusion, the perspective spontaneously switches between two possibilities. It's been shown that while people don't have consciouss access to the real position, it is available for eye-movements, and hence has to be represented somewhere in the brain. So it could also be that when the distance between the perceived and retinal position is too large, perception switches back to the retinal position, and that this causes the reset.
+After some time (typically ~2 s), it seems that the illusion resets to the real position of the stimulus. This might simply be because of the passage of time, like in the Necker-cube illusion, the perspective spontaneously switches between two possibilities. It's been shown that while people don't have consciouss access to the real (retinal) position, it is available for eye-movements, and hence has to be represented somewhere in the brain. So it could also be that when the distance between the perceived and retinal position is too large, perception switches back to the retinal position, and that this causes the reset.
 
-After viewing the stimulus peripherally, we asked participants to draw the path that they saw the stimulus take on the screen, and then used an algorithm to estimate the location of the reset. We then average those positions for each of the 6 different stimulus condition (2 "forward" speeds x 3 "sideways" speeds). Since we know how fast the stimulus moved forward, the y-coordinate of the reset can be converted to time since start of the trial, and the x-coordinate gives distance between the real and perceived positions. That way, we can test which of the two predicts resets better.
+After viewing the stimulus peripherally, we asked participants to draw the path that they saw the stimulus take on the screen, and then used an algorithm to estimate the location of the reset. We then average those positions for each of the 6 different stimulus condition (2 "forward" speeds x 3 "sideways" speeds) within each participant. Since we know how fast the stimulus moved forward, the y-coordinate of the reset can be converted to time since start of the trial, and the x-coordinate gives distance between the real and perceived positions. That way, we can test which of the two predicts resets better.
 
 Let's have a look at the dataset.
 
@@ -32,5 +33,591 @@ resets <- read.csv('data/reset_points.csv', stringsAsFactors = F)
 str(resets)
 ```
 
-There are several participants, and the stimulus is described by internal speed (sideways motion) and external speed (forward motion). The average location of the resets is given by boundX_mean and boundY_mean.
+There are several participants, and the stimulus is described by internal speed (sideways motion) and external speed (forward motion). The average location of the resets is given by boundX_mean and boundY_mean. These are in proportions of the workspace the task was done in. The stimulus moved from (0,0) to (0,1) in this space, so both X and Y coordinates would be somewhere between 0 and 1. This corresponds to exactly 13.5 cm and for the Y coordinate it is already normalized so that the spatial coordinates correspond to a scale from 0 - 4 seconds (externalspeed is still given in either 3 or 4 second durations).
 
+Of course, we should start by looking at the data:
+
+```{r}
+# pretty colors:
+colors <- list()
+colors[['blue']]      <- list('s'='#005de4ff', 't'='#005de42f')
+colors[['lightblue']] <- list('s'='#0fd2e2ff', 't'='#0fd2e22f')
+colors[['yorkred']]   <- list('s'='#e51636ff', 't'='#e516362f')
+colors[['orange']]    <- list('s'='#ff8200ff', 't'='#ff82002f')
+colors[['purple']]    <- list('s'='#b400e4ff', 't'='#b400e42f')
+
+
+# scatter of reset points
+plot( resets$boundX_mean, 
+      resets$boundY_mean, 
+      main='reset point coordinates', 
+      asp=1, 
+      xlim=c(-0.15, 0.35), ylim=c(-0.1, 1.1), 
+      bty='n', ax=F, 
+      xlab='X coordinate [cm]', ylab='Y coordinate [s]', 
+      col=colors[['purple']]$s )
+segments(x0=resets$boundX_mean-resets$boundX_sd, y0=resets$boundY_mean, x1=resets$boundX_mean+resets$boundX_sd, y1=resets$boundY_mean, col=colors[['purple']]$t)
+segments(x0=resets$boundX_mean, y0=resets$boundY_mean-resets$boundY_sd, x1=resets$boundX_mean, y1=resets$boundY_mean+resets$boundY_sd, col=colors[['purple']]$t)
+
+# path of gabor:
+#lines(c(0,0),c(0,1),col='#999999', lw=2, lty=1)
+arrows(0,0,0,1,length=0.25,col='#999999',lwd=2,angle=20)
+  
+# X coordinates:
+medX <- median(resets$boundX_mean)
+text(x=medX-0.065,y=1.075,labels=sprintf('%0.1f cm',medX*13.5))
+lines(rep(medX,2),c(0.05,1.05),col=colors[['yorkred']]$s,lty=2,lw=2)
+  
+# Y coordinates:
+medY <- median(resets$boundY_mean)
+text(4/13.5,medY+0.05,sprintf('%0.1f s',medY*4))
+lines(c(-0.08,0.3),rep(medY,2),col=colors[['blue']]$s,lty=2,lw=2)
+  
+# sensible tick marks on the axes:
+xtick_cm <- c(-1,1,3)
+axis(side=1, at=xtick_cm/13.5, labels=xtick_cm)
+ytick_cm <- seq(0,4,length.out = 5)
+axis(side=2, at=ytick_cm/4, labels=ytick_cm)
+  
+```
+
+The gray arrow is the real, forward path of the gabor. We normalized the data, so the internal motion is always depicted rightward. It seems that the median of the X-coordinates (1.6 cm) is a pretty good limit, as most of the data is fairly close to it. The median of the Y-coordinates (1.4 s) or any set Y coordinate is not such a great limit: the resets are spread out much more relative to that.
+
+Another way of looking at it would be to compare the spread of Y coordinates to the spread of X coordinates:
+
+```{r}
+sd(resets$boundX_mean) / sd(resets$boundY_mean)
+```
+
+So there is four to five times as much spread along the Y axis as compared to the X axis. This would mean that almost 80% of the data could be explained by a spatial limit, relative to how much can be explained by a time limit.
+
+# Single Limit Models
+
+After browsing the trigonometry page on [Wikipedia](https://en.wikipedia.org/wiki/Trigonometry), we can model each of these two limits with a simple function. That is, provided we also have the slope of the initial percept, but that turns out to already be in the data frame. It's magic.
+
+For a given spatial limit (with a set X coordinate) we use this functional model:
+
+$y = L_x \cdot s$
+
+And conversely, for a given time limit (a set Y coordinate) we use this functional model:
+
+$x = \frac{L_y}{s}$ 
+
+Where the x and y coordinates, as well as their limits Lx and Ly are in the same spatial coordinates that the experiment was done in, and s is the slope of the initial trace (y/x on the samples halfway to the reset point). We can convert the x and y values to centimeters or seconds later on.
+
+## Setting up functions for single limit models
+
+This can easily be implemented as two functions:
+
+```{r}
+resetXfromYlim <- function(par,slopes) {
+  
+  # time limit
+  return(data.frame('x'=par['Ly'] / slopes))
+  
+}
+
+
+resetYfromXlim <- function(par,slopes) {
+  
+  # space limit
+  return(data.frame('y'=par['Lx'] * slopes))
+  
+}
+```
+
+For both, we will calculate errors as distances between the predicted reset points and the measured resest points in the 2D plane, using Pythagoras' formula.
+
+```{r}
+resetXlimMSE <- function(par,slopes,coords) {
+
+  return( mean( (resetYfromXlim(par,slopes)$y - coords$y)^2 + (par['Lx'] - coords$x)^2 ) )
+
+}
+
+resetYlimMSE <- function(par,slopes,coords) {
+  
+  return( mean( (resetXfromYlim(par,slopes)$x - coords$x)^2 + (par['Ly'] - coords$y)^2 ) )
+  
+}
+```
+
+## Finding starting parameters
+
+Minimizing this MSE allows fitting the two models, we start this at the winner of a one-dimensional gridsearch:
+
+```{r}
+coords <- data.frame('x'=resets$boundX_mean, 'y'=resets$boundY_mean)
+slopes <- resets$slope
+
+# search "grid"
+Lx=seq(0,1,.05)
+Ly=seq(0,1,.05)
+
+# as a data frame:
+searchgridYlim <- expand.grid('Ly'=Ly)
+searchgridXlim <- expand.grid('Lx'=Lx)
+  
+# get MSE for points in search grid:
+YlimMSE <- apply(searchgridYlim, FUN=resetYlimMSE, MARGIN=c(1), slopes=slopes, coords=coords)
+XlimMSE <- apply(searchgridXlim, FUN=resetXlimMSE, MARGIN=c(1), slopes=slopes, coords=coords)
+
+par(mfrow=c(1,2))
+plot(searchgridYlim$Ly,YlimMSE,type='l',main='Ly gridsearch',xlab='Ly',ylab='MSE',bty='n')
+plot(searchgridXlim$Lx,XlimMSE,type='l',main='Lx gridsearch',xlab='Lx',ylab='MSE',bty='n')
+
+```
+
+## Minimizing MSEs
+
+That looks great, and as expected there are no local minima, so we can start optimizing at the best point of each of the two gridsearches:
+
+```{r}
+# get the best points in the grid:
+topgridXlim <- c('Lx'=searchgridXlim[order(XlimMSE)[1],])
+topgridYlim <- c('Ly'=searchgridYlim[order(YlimMSE)[1],])
+
+library(optimx)
+
+Xlim <- optimx(par=c(topgridXlim), 
+               fn=resetXlimMSE,
+               method='L-BFGS-B',
+               lower=c(0),
+               upper=c(1),
+               slopes=slopes,
+               coords=coords )
+
+Ylim <- optimx(par=c(topgridYlim), 
+               fn=resetYlimMSE,
+               method='L-BFGS-B',
+               lower=c(0),
+               upper=c(1),
+               slopes=slopes,
+               coords=coords )
+
+```
+
+
+For both of those we get a nice table:
+
+```{r}
+print(Xlim)
+```
+
+```{r}
+print(Ylim)
+```
+
+Here's a reminder on how to read these tables. There is only one row in each table, as we rely on the 'L-BFGS-B' method throughout. Each also has a single column for the fitted parameter, either Lx or Ly. The `value` column is the MSE at the winning parameter. The other columns tell us a little bit about how the fitting process went. You should pay most attention to the parameter and value columns as they should make sense to you. But you should also quickly scan the other ones. For example `fevals` tells you how often `optimx()` called the error function (with different parameters), and if this is really high, this might indicate some problem.
+
+Here we see that the spatial limit $L_x$ is equal to 0.126 * 13.5 cm = 1.7 cm, and the time limit $L_y$ would be equal to around 0.359 * 4 s = 1.4 s. This is pretty close to the medians we put in the scatter plot of the reset points above. We can visualize the fits by plotting one of the coordinates (x or y) over the illusion strength (initial direction, transformed to slopes for the model), and the predicted coordinates on top:
+
+```{r}
+
+par(mfrow=c(1,2))
+
+fit_directions <- c(10:40)
+fit_raddirections <- ((90 - fit_directions) / 180) * pi
+fit_slopes <- sin(fit_raddirections) / cos(fit_raddirections)
+
+# PANEL: time limit
+
+plot( resets$initialdirection_mean, 
+      resets$boundX_mean*13.5, 
+      main=sprintf('time limit (%0.2f s)', Ylim$Ly*4), 
+      xlab='illusion strength [deg]', 
+      ylab='X coordinates [cm]', 
+      bty='n', ax=F, xlim=c(5,45), ylim=c(0,10), 
+      col=colors[['blue']]$s )
+  
+fittedX <- resetXfromYlim(c('Ly'=Ylim$Ly),fit_slopes)$x * 13.5
+lines(fit_directions,fittedX,col=colors[['blue']]$s)
+
+lines(c(10,40),rep(Xlim$Lx*13.5,2),lty=2,col=colors[['yorkred']]$s)
+
+axis(side=1, at=c(10,20,30,40))
+axis(side=2, at=c(0,2,4,6,8,10))
+  
+# PANEL: space limit
+  
+plot( resets$initialdirection_mean, 
+      resets$boundY_mean*4, 
+      main=sprintf('space limit (%0.2f cm)', Xlim$Lx*13.5), 
+      xlab='illusion strength [deg]', 
+      ylab='Y coordinates [s]', 
+      bty='n', ax=F, xlim=c(5,45), ylim=c(0,4), 
+      col=colors[['yorkred']]$s )
+
+fittedY <- resetYfromXlim(c('Lx'=Xlim$Lx),fit_slopes)$y * 4
+lines(fit_directions,fittedY,col=colors[['yorkred']]$s)
+
+lines(c(10,40),rep(Ylim$Ly*4,2),lty=2,col=colors[['blue']]$s)
+
+axis(side=1, at=c(10,20,30,40))
+axis(side=2, at=c(0,1,2,3,4))
+```
+
+We can see how well the time limit predicts X coordinates, as depicted in the left graph in blue, or how well the spatial limit predicts Y coordinates, as shown in the right graph in red. The spatial limit seems to follow the data much better.
+
+The dashed lines also put the fit limits over the coordinates they represent, and this also suggests a better fit for the spatial limit.
+
+But how much better is better? This is where formal model evaluation comes into play. We will use the MSEs to calculate AICs and from there on, their relative likelihoods. The best model (probably space limit) will get a relative likelihood of 1 (this is its likelihood relative to itself), while the other model (probably time limit) will get a lower relative likelihood. We'll put the cut-off at 0.05, just like the common alpha for NHST.
+
+We make a vector of MSEs, and will also need a vector with the number of parameters, and the number of _independent observations_ in the data. The MSE and number of parameters can vary per model, but the nuber of independent observations is a property of the data.
+
+```{r}
+MSE <- c('time'=Ylim$value, 'space'=Xlim$value)
+k   <- c(1,1)
+N   <- dim(resets)[1]
+```
+
+Here is a function to calculate a bunch of AICs:
+
+```{r}
+AIC <- function(MSE, k, N) {
+  return( (N * log(MSE)) + (2 * k) )
+}
+```
+
+And here is a function to convert them to relative likelihoods:
+
+```{r}
+relativeLikelihood <- function(crit) {
+  return( exp( ( min( crit  ) - crit  ) / 2 ) )
+}
+```
+
+```{r}
+AICs <- AIC(MSE=MSE, k=k, N=N)
+print(relLik <- relativeLikelihood(AICs))
+```
+
+That is, the relative likelihood of the the time limit model is very low compared to that of the space limit model, well below our cut-off value. We can conclude that the space limit model is (significantly) better than the time limit model.
+
+# Multi-parameter models
+
+OK, so space is better than time... but does time do nothing? If we look at the time limit as plotted in the figure on right where reset time is predicted from slope and a spatial limit, it is pretty clear that the errors between the blue dashed line and the red dots vary systematically with the slope. But it could be that the errors between the dashed red line and the blue dots in the figure on the left are also non-random. That would mean there is some room for time to predict something on top of the spatial limit. We're going to test this with two more models. These are a little more complicated so we'll build them one after the other.
+
+## Weighted Limits Model
+
+For the third model, we'll consider the possibility that each component (time or space) is weighted, with the weights adding up to one. That is, this model has a time limit (Ly) a space limit (Lx), and a single weight (a). It will predict both the X and Y coordinates of reset points based on these parameters and the slopes of the initial trace.
+
+Here is the model function:
+
+```{r}
+weightedLimitsModel <- function(par, slopes) {
+  
+  Lx <- par['Lx']
+  Ly <- par['Ly']
+  a  <- par['a']
+  
+  y <- (a * Lx * slopes) + ((1-a) * Ly)
+  x <- (a * Lx)          + ((1-a) * Ly / slopes)
+  
+  return( data.frame(x,y) )
+  
+}
+```
+
+And the error function:
+
+```{r}
+weightedLimitsMSE <- function(par,slopes,coords) {
+  
+  resets <- weightedLimitsModel(par,slopes)
+  
+  return( mean( (resets$x - coords$x)^2 + (resets$y - coords$y)^2 ) )
+  
+}
+```
+
+Since slopes and coords are already there from the previous work, we can immediately start fitting the function. But first we might think about the starting parameters. Does it make sense to do a gridsearch now? Perhaps more than before with the single limit models. The limits should still be between 0 and 1, but they might be affected by the weight. We could limit the weight parameter a, to be between 0.5 and 1 as we already expect it to favour space. So we can use that both to restrict grid search and to put limits on parameters in `optimx()`. However, other values are not strictly impossible, so let's see if the model converges on what we expect.
+
+First we do gridsearch:
+
+```{r}
+# reasonable values:
+Lx=seq(0,1,.02)
+Ly=seq(0,1,.02)
+a=seq(0,1,.025)
+
+searchgrid <- expand.grid('Lx'=Lx, 'Ly'=Ly, 'a'=a)
+  
+# get MSE for points in search grid:
+MSE <- apply(searchgrid,FUN=weightedLimitsMSE,MARGIN=c(1),slopes=slopes,coords=coords)
+
+# get 5 best points in the grid:
+print(cbind(topgrid <- searchgrid[order(MSE)[1:5],],'MSE'=sort(MSE)[1:5]))
+```
+
+The MSEs are actually not much lower than that of the simple spatial limit.
+
+Let's see if it gets improved more, and favours a weight over 0.5 when `optimx()` is allowed to find the best solution though:
+
+```{r}
+library(optimx)
+allfits <- do.call("rbind",
+                   apply( topgrid,
+                          MARGIN=c(1),
+                          FUN=optimx,
+                          fn=weightedLimitsMSE,
+                          method='L-BFGS-B',
+                          lower=c(0,0,0),
+                          upper=c(1,1,1),
+                          slopes=slopes,
+                          coords=coords ) )
+print(allfits)
+# pick the best fit:
+win <- allfits[order(allfits$value)[1],]
+# print(win[1:3])
+# print(win)
+
+winpar <- as.numeric(win[1:3])
+names(winpar) <- names(win[1:3])
+```
+
+The parameters didn's change much from the grid search, but they shouldn't if gridsearch allows us to get close to several local minima. However all runs of `optimx()` seem to converge on the exact same MSE (~0.0177), regardless of the exact values of the parameters.  In other words: there are multiple (at least 5) sets of parameters that will predict reset points equally well, so that it seems there is no best set of parameters. Let's plot these 5 solutions to see if the predicted reset points are different even if the MSEs are not:
+
+```{r, fig.width=11, fig.height=3}
+par(mfrow=c(1,5),mar=c(4,2,3,2))
+
+fit_directions <- c(10:40)
+fit_raddirections <- ((90 - fit_directions) / 180) * pi
+fit_slopes <- sin(fit_raddirections) / cos(fit_raddirections)
+
+for (solno in c(1:dim(allfits)[1])) {
+  
+  # plot each solution:
+  pars <- unlist(allfits[solno,1:3])
+  
+  plot(-1000,-1000,
+       main=sprintf('Lx=%.2f, Ly=%.2f, a=%.2f',pars['Lx'],pars['Ly'],pars['a']),
+       xlab='initial direction',ylab='',
+       xlim=c(5,45), ylim=c(0,1),
+       bty='n',ax=F)
+  
+  prediction <- weightedLimitsModel(pars, fit_slopes)
+  
+  lines(fit_directions,prediction$x,col=colors[['blue']]$s)
+  lines(fit_directions,prediction$y,col=colors[['yorkred']]$s)
+  
+  axis(side=1, at=c(10,25,40))
+  if (solno == 1) {
+    axis(side=2, at=c(0,3,6,9,12)/13.5, labels=sprintf('%d',c(0,3,6,9,12)))
+  }
+  if (solno == 5) {
+    axis(side=4, at=c(0,1,2,3,4)/4, labels=sprintf('%d',c(0,1,2,3,4)))
+  }
+}
+
+
+```
+
+Slopes are on the X-axes, red line is predicted y coordinates, blue line predicted x coordinates. Spatial coordinates in centimeters given in the far left tick marks, time coordinates in seconds given in the tick marks on the far right.
+
+It looks like the MSEs are all the same because the predictions are actually the same as well. Perhaps this model isn't so great after all. We'll move on to the next model.
+
+## Added Limits Model
+
+The fourth model is essentially the same, but without the weight. Let's try that first. Here is the model function:
+
+```{r}
+addedLimitsModel <- function(par, slopes) {
+  
+  Lx <- par['Lx']
+  Ly <- par['Ly']
+  
+  y <- (Lx * slopes) + (Ly)
+  x <- (Lx)          + (Ly / slopes)
+  
+  return( data.frame(x,y) )
+  
+}
+```
+
+And the error function:
+
+```{r}
+addedLimitsMSE <- function(par,slopes,coords) {
+  
+  resets <- addedLimitsModel(par,slopes)
+  
+  return( mean( (resets$x - coords$x)^2 + (resets$y - coords$y)^2 ) )
+  
+}
+```
+
+And we can do gridsearch just like before:
+
+```{r}
+# reasonable values:
+Lx=seq(0,1,.02)
+Ly=seq(0,1,.02)
+
+searchgrid <- expand.grid('Lx'=Lx, 'Ly'=Ly) 
+  
+# get MSE for points in search grid:
+MSE <- apply(searchgrid,FUN=addedLimitsMSE,MARGIN=c(1),slopes=slopes,coords=coords)
+
+# get 5 best points in the grid:
+print(topgrid <- searchgrid[order(MSE)[1:5],])
+```
+
+And we can fit it:
+
+```{r}
+library(optimx)
+allfits <- do.call("rbind",
+                   apply( topgrid,
+                          MARGIN=c(1),
+                          FUN=optimx,
+                          fn=addedLimitsMSE,
+                          method='L-BFGS-B',
+                          lower=c(0,0),
+                          upper=c(1,1),
+                          slopes=slopes,
+                          coords=coords ) )
+print(allfits)
+# pick the best fit:
+win <- allfits[order(allfits$value)[1],]
+# print(win[1:3])
+# print(win)
+
+winpar <- as.numeric(win[1:2])
+names(winpar) <- names(win[1:2])
+```
+
+The MSE again has the same value for all fits, but at least the parameters have all also converged on the same values as well.
+
+Maybe it's OK to look at how much of each of the single limits is still left over in this new model in order to assess their relative importance? That would work like this:
+
+```{r}
+relCon <- c( winpar['Lx'] / Xlim$Lx,
+             winpar['Ly'] / Ylim$Ly  )
+print(relCon <- relCon / sum(relCon))
+```
+
+And this again confirms that the spatial limit is about 4 times more important than the time limit.
+
+## Comparing Models
+
+Now the interesting issue here is to see if this model is actually better than the models with the single limits. We'll add the fourth model to our AIC-based test (and forget about the third model). To do that we add the MSE to the vector of MSEs and we add the number of parameters (2) to the vector k:
+
+```{r}
+MSE <- c('time'=Ylim$value, 'space'=Xlim$value, 'space+time'=win$value)
+k   <- c(1,1,2)
+N   <- dim(resets)[1]
+```
+
+Now we can run the same functions we defined before to get the models' relative likelihoods again:
+
+```{r}
+AICs <- AIC(MSE=MSE, k=k, N=N)
+print(relLik <- relativeLikelihood(AICs))
+```
+
+This means that the fourth model with space and time limits added to each other fits the data best. The model with only a time limit is certainly worse than the best model, but the model with only a space limit is comparable.
+
+# Alternate weight model
+
+If we want to assess the relative importance of both limits, we might want to fix the limits to what we found in the single limit models, and then find the weight.
+
+Let's try this. Here is the model function:
+
+```{r}
+weightOnlyModel <- function(par, slopes, limits) {
+  
+  a <- par['a']
+  Lx <- limits['Lx']
+  Ly <- limits['Ly']
+  
+  y <- (a * Lx * slopes) + ((1-a) * Ly)
+  x <- (a * Lx)          + ((1-a) * Ly / slopes)
+  
+  return( data.frame(x,y) )
+  
+}
+```
+
+And the error function:
+
+```{r}
+weightOnlyMSE <- function(par,slopes,coords,limits) {
+  
+  resets <- weightOnlyModel(par,slopes,limits)
+  
+  return( mean( (resets$x - coords$x)^2 + (resets$y - coords$y)^2 ) )
+  
+}
+```
+
+And we do grid search:
+
+```{r}
+# a can be anything:
+a=seq(0,1,.01)
+
+searchgrid <- expand.grid('a'=a)
+
+# we need to set up the limits as well:
+limits <- c('Lx' = Xlim$Lx,
+            'Ly' = Ylim$Ly)
+  
+# get MSE for points in search grid:
+MSE <- apply(searchgrid,FUN=weightOnlyMSE,MARGIN=c(1),slopes=slopes,coords=coords,limits=limits)
+
+topgrid <- data.frame('a'=searchgrid[order(MSE)[1:5],])
+
+# get 5 best points in the grid:
+print(cbind(topgrid,'MSE'=sort(MSE)[1:5]))
+```
+
+The best weights are around 83%.
+
+```{r}
+library(optimx)
+allWfits <- do.call("rbind",
+                   apply( topgrid,
+                          MARGIN=c(1),
+                          FUN=optimx,
+                          fn=weightOnlyMSE,
+                          method='L-BFGS-B',
+                          lower=c(0),
+                          upper=c(1),
+                          slopes=slopes,
+                          coords=coords,
+                          limits=limits) )
+print(allWfits)
+# pick the best fit:
+winW <- allWfits[order(allWfits$value)[1],]
+# print(win[1:3])
+# print(win)
+
+winWpar <- as.numeric(winW[1])
+names(winWpar) <- names(winW[1])
+```
+
+And relative likelihood:
+
+```{r}
+MSE <- c('time'=Ylim$value, 'space'=Xlim$value, 'space+time'=win$value, 'alpha'=winW$value)
+k   <- c(1,1,2,3)
+N   <- dim(resets)[1]
+```
+
+Notice that I'm saying there are 3 parameters in the model where fit the alpha only. Tis is because it first relies on fitting the Lx and Ly parameters separately. Opinions may differ as to wether or not that counts. They could have been replaced with the medians of the coordinates for example.
+
+Now we can run the same functions we defined before to get the models' relative likelihoods again:
+
+```{r}
+AICs <- AIC(MSE=MSE, k=k, N=N)
+print(relLik <- relativeLikelihood(AICs))
+```
+
+When we say the alpha model only has 1 parameter, it will be considered the best, but the space+time model is not worse.
+
+# Take away
+
+What you should have picked up here is that we can use criteria like the AIC to compare models that are fit to the same dataset. This allows deciding if one model is better than another, if there are no other grounds for dropping one model. 
+
+As an example of other reasons for picking one model over another, the model above that used three parameters had multiple equally good solutions. We didn't need any statistics there to decide that the model was bad.
