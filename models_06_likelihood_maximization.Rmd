@@ -10,10 +10,10 @@ author: Marius 't Hart
 
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
-opts_chunk$set(comment='', eval=FALSE)
+#opts_chunk$set(comment='', eval=FALSE)
 ```
 
-Most model evaluation criteria don't work with minimizing a loss function (like MSE) but by maximizing the likelihood of the model. If you'd like to calculate a BIC, AICc or Hannan-Quinn criterion for your model - and probably others, you need the likelihood of the model.
+Some model evaluation criteria don't work with minimizing a loss function (like MSE) but by maximizing the likelihood of the model. If you'd like to calculate a [BIC](https://en.wikipedia.org/wiki/Bayesian_information_criterion), [AICc](https://en.wikipedia.org/wiki/Akaike_information_criterion#Modification_for_small_sample_size) or [Hannan-Quinn](https://en.wikipedia.org/wiki/Hannan%E2%80%93Quinn_information_criterion) criterion for your model - and probably others, you need the likelihood of the model. There are other benefits too. The cost is that we need to have an estimate of noise in the data.
 
 _Note 1:_ This does not mean that your previous model fits are wrong. The likelihood of the model [can be shown](https://stats.stackexchange.com/questions/16508/calculating-likelihood-from-rmse) to be at it's maximum at the same parameters where the error is minimized. It's just that you can only use AIC for model evaluation.
 
@@ -50,7 +50,7 @@ plot(seq(3,7,0.001),dnorm(seq(3,7,0.001), mean=mean(SSL), sd=sd(SSL)), type='l',
 
 Notice that the curve exceeds 1. How can there be a probability larger than 1? That's because this is not a probability function, but a probability _density_ function. (It's impossible to have an actual probability function, since the chance of any exact value is infinitely small, best described as 0.) We could convert this to probabilities by slicing the curve into very tiny bins, and taking the surface of the bin, as the total surface is supposed to be 1. However, for our purposes we can apparently just use probability density, as it provides a _relative_ likelihood (within some range) of a particular value occurring as compared to other values.
 
-Let's say that we only get the first ten of the 50 observations, and we can check the likelihood of those obervations relative to the whole dataset.
+Let's Look at the first 10 of the 50 observations, so we can check the likelihood of those obervations relative to the whole dataset.
 
 ```{r}
 print(data.frame('SSL'=SSL[1:10], 'likelihood'=dnorm(SSL[1:10], mean=mean(SSL), sd=sd(SSL))))
@@ -103,7 +103,7 @@ print(Lopt <- optim(par=4, fn=SSL_Likelihood, data=SSL, method='Brent', lower=0,
 
 ## Evaluating the likelihood maximization model
 
-So both methods find the exact same parameter values. Except for the likelihood we can now also calculate BIC and Hannan-Quinn:
+So both methods find the exact same parameter values. Except that with the likelihood we can now also calculate BIC and Hannan-Quinn:
 
 ```{r}
 
@@ -144,11 +144,7 @@ mu <- apply(tworatedata[4:ncol(tworatedata)],
             MARGIN=c(1), 
             na.rm=TRUE)
 
-# This is for individual likelihoods in each trial,
-# it might be a better way to fit the processes, 
-# but it's less comparable to MSE, as it effectively
-# weighs errors on certain trials differently from others
-
+# This is for individual likelihoods in each trial:
 # sigma <- apply(tworatedata[4:ncol(tworatedata)]-mu,
 #                FUN=sd,
 #                MARGIN=c(1),
@@ -160,11 +156,8 @@ sigma <- sd(as.matrix(tworatedata[4:ncol(tworatedata)] - mu), na.rm=T )
 
 schedule <- tworatedata$schedule
 
-
-
 reaches <- list( 'mean' = mu,
                  'sd'   = sigma )
-# Note that sd is not a single value.
 ```
 
 Let's see what the data frame `reaches` looks like:
@@ -173,18 +166,24 @@ Let's see what the data frame `reaches` looks like:
 str(reaches)
 ```
 
+Here I keep the sd as one single value. This has two reasons. If you want to fit a whole group of participants, then you do have an estimate of standard deviation on every trial, and the functions below can handle that. However, the fit would be different (probably not much) from the MSE fit, as it would effectively weight certain errors more than others. For this tutorial, where we want to compare the MSE-based fit and the Likelihood-based it, we should stick to a single noise estimate. The other issue is that if you want to fit the model to an individual participant's data, you don't get a separate estimate of noise per trial (unless you measure them many times), so in that case we should determine the noise of that participant, and use that to describe the data.
+
 This determines a 2-dimensional likelihood "landscape", and our model fit will have stay on the top ridge of that landscape. Here's a visualization of that landscape:
 
 ```{r}
-likelihoods <- matrix(data=NA, nrow=164, ncol=91)
+
+trials <- 164
+reachdevs <- seq(-45,45,0.5)
+
+likelihoods <- matrix(data=NA, nrow=trials, ncol=length(reachdevs))
 for (trial in c(1:length(reaches$mean))) {
-  likelihoods[trial,] <- dnorm(c(-45:45), mean=reaches$mean[trial], sd=reaches$sd)
+  likelihoods[trial,] <- dnorm(reachdevs, mean=reaches$mean[trial], sd=reaches$sd)
 }
 
 # this bit copied from stack overflow:
 # https://stackoverflow.com/questions/29786380/standardizing-color-scale-persp-plots-in-panel-r
-nrz <- 164
-ncz <- 91
+nrz <- trials
+ncz <- length(reachdevs)
 # Create a function interpolating colors in the range of specified colors
 jet.colors <- colorRampPalette( c("white", "purple") )
 # Generate the desired number of colors from this palette
@@ -196,13 +195,12 @@ zfacet <- likelihoods[-1, -1] + likelihoods[-1, -ncz] + likelihoods[-nrz, -1] + 
 facetcol <- cut(zfacet, nbcol)
 
 
-persp(c(1:164), c(-45:45), likelihoods*300, phi = 50, theta = 0,
+persp(c(1:trials), reachdevs, likelihoods*300, phi = 50, theta = 0,
   xlab = "trial", ylab = "reach deviation", zlab='likelihood',
-  main = "likelihood landscape for two-rate model", col=color[facetcol], shade=0.2, border=NA,
+  main = "likelihood 'landscape' for two-rate model", col=color[facetcol], shade=0.2, border=NA,
   scale = FALSE
 )
 ```
-
 
 Our model function will still be the same:
 
@@ -248,12 +246,13 @@ twoRateModel <- function(par, schedule) {
 }
 ```
 
-
 But the criterion function will be different. It should return a likelihood now, which is done in the last line of code and it is a somewhat complicate line. It can be done in a single line, because `dnorm()` takes vectorized input for any of its arguments (make sure that if two or more arguments are a vector, that they are of equal length, not sure what would happen if that is not the case).
+
+Instead of a bigError in case the parameters violate constraints, we now return a lowLikelihood, and this is actually easier to estimate, as the lowest possible likelihood is zero.
 
 Also, we now add some other criteria that return our lowLikelihood. These are to ensure that the returned model is "stable".
 
-Since most (all?) likelihoods we will get will be below 1, taking the product of many of them will result in a very low number. Differences between those likelihoods of the whole series with different parameters will soon become so small that the algorithm will consider them insignificant and stop, while least square errors algorithms will continue. That's why, in the last line, I also raise the likelihood to the power if one over the length of the sequence of likelihoods. This should get the total likelihood back on a scale of approximately 0 to 1, instead of between two very small numbers.
+Since most (all?) likelihoods we will get will be below 1, taking the product of many of them will result in a very low number. Differences between those likelihoods of the whole series with different parameters will soon become so small that the algorithm will consider them insignificant and stop, while least square errors algorithms will continue optimizing. That's why, in the last line, I also raise the likelihood to the power if one over the length of the sequence of likelihoods. This should get the total likelihood back on a scale of approximately 0 to 1, instead of between two very small numbers.
 
 ```{r}
 twoRateLikelihood <- function(par, schedule, reaches, checkStability=FALSE) {
@@ -273,14 +272,9 @@ twoRateLikelihood <- function(par, schedule, reaches, checkStability=FALSE) {
     return(lowLikelihood)
   }
   
-  # my own constraint:
-  # if ((par['Ls']+par['Lf']) > 1) {
-  #   return(lowLikelihood)
-  # }
-  
+  # stability constraints:
   if (checkStability) {
     
-    # stability constraints:
     if ( ( ( (Rf - Lf) * (Rs - Ls) ) - (Lf * Ls)) <= 0 ) {
       return(lowLikelihood)
     }
@@ -293,7 +287,7 @@ twoRateLikelihood <- function(par, schedule, reaches, checkStability=FALSE) {
     
   }
 
-  # the following line works both if sd is a single value or a vector:
+  # the following line works both if sd is a single value or a vector with the same length as reaches$mean:
   return( prod( dnorm((twoRateModel(par, schedule)$total - reaches$mean), mean=0, sd=reaches$sd)^(1/length(reaches$mean)) ) )
   
 } 
@@ -363,19 +357,22 @@ axis(1,c(1,32,132,144,164),las=2)
 axis(2,c(-30,-15,0,15,30))
 ```
 
-They look the same, but are they?
+There is a purple line going through the data, based on the MSE solution (with the red and blue lines indicating the fast and slow process respectively), and there is a dashed orange line showing the model output for the solution found when maximizing the likelihood. I can't spot any difference between the purple and orange line, so they're probably the same. Can we quantify this?
 
 ```{r}
 MSE_likelihood <- twoRateLikelihood(par=MSEpar, schedule=schedule, reaches=reaches, checkStability = F)
 LIK_likelihood <- twoRateLikelihood(par=par, schedule=schedule, reaches=reaches, checkStability = F)
 print(likelihoods <- c('MSE'=MSE_likelihood, 'L'=LIK_likelihood))
-
 ```
 
-The likelihood is different on the 8th decimal place, which I'm sure we can ignore.
+The likelihood is different on the 8th decimal place, which I'm sure we can ignore. You can further verify that the solutions are the same by checking if the MSE is different or not for the solutions based on likelihood or MSE.
 
-# Double-Drift Reset Points
+The parameters are highly similar, the likelihoods are highly similar and perhaps you checked that the MSE is also highly similar. This means that fitting models with likelihood gives you the same solutions as fitting models with MSE. The advantage of MSE is that it is in the unit the data was recorded in, and the advantage of the likelihood is that it can be used for other computations down the line. It will help us get closer to expectation maximization and probably is useful if we want our models to include noise terms.
 
-Another possibility is that our likelihood function takes some irregular shape that is not described by an existing function, or when it occurs in multiple dimensions. This is the case for the Double-Drift Reset Points data that we covered in the Model Evaluation tutorial. At least, the data is best described as a two-dimensional distribution, which might have an irregular shape. I'll try to solve that here.
+## Noise as part of the model
 
-It could be seen as the product of two likelihood functions, but we might have to rotate the data with PCA first, so that the two likelihood functions operate on one axis only (or... mostly). 
+If we want to fit individual participants, so we don't have an estimate of the standard deviation for every trial, but we do assume that noise is different in separate parts of the paradigm, we could make parameters of the noise terms and see how likely the participant's data is given the model, instead of how likely the model is given the data. Maybe this is a topic for a future tutorial.
+
+# Take away
+
+We can define likelihood functions and have models be fit by maximizing their likelihood. This is perhaps slightly harder than fitting models by minimizing errors. However, it should result in the same solution (if the approach is the same - as for the two-rate model), and with the likelihoods of models we can then extend the model evaluation metrics from only AIC to also BIC, Hannan-Quinn and perhaps others.
