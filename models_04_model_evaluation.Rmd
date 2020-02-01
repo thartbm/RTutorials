@@ -78,7 +78,6 @@ xtick_cm <- c(-1,1,3)
 axis(side=1, at=xtick_cm/13.5, labels=xtick_cm)
 ytick_cm <- seq(0,4,length.out = 5)
 axis(side=2, at=ytick_cm/4, labels=ytick_cm)
-  
 ```
 
 The gray arrow is the real, forward path of the gabor. We normalized the data, so the internal motion is always depicted rightward. It seems that the median of the X-coordinates (1.6 cm) is a pretty good limit, as most of the data is fairly close to it. The median of the Y-coordinates (1.4 s) or any set Y coordinate is not such a great limit: the resets are spread out much more relative to that.
@@ -620,4 +619,4 @@ When we say the alpha model only has 1 parameter, it will be considered the best
 
 What you should have picked up here is that we can use criteria like the AIC to compare models that are fit to the same dataset. This allows deciding if one model is better than another, if there are no other grounds for dropping one model. 
 
-As an example of other reasons for picking one model over another, the model above that used three parameters had multiple equally good solutions. We didn't need any statistics there to decide that the model was bad.
+As an example of other reasons for picking one model over another, the model above that tried to fit the two limits and wieght at the same time had multiple equally good solutions. This means that the model is underconstrained, and there is no optimal solution. In turn that means we can't decide which parameters are best and consequently there is no interpretation of them. We didn't need any statistics there to decide that the model was not useful.
