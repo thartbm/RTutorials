@@ -1,0 +1,162 @@
+---
+title: "Model Fitting: Including Noise"
+output: html_notebook
+---
+
+You might have come across models that include a noise term, and might have wondered about them. Here I'll try out one possible way to include noise. It builds on the likelihood approach. However, we won't use the standard deviation in the data, to determine the likelihood of the model's prediction. Instead, we'll fit the standard deviation, so that we can determine the likelihood of the data, given the model, and optimize that.
+
+If I'm correct, this should lead to the same solution. However, this approach doesn't require that we know the standard deviation of the data. Say, if we have two-rate schedule data for one participant only, we could somehow extract standard deviations from the data (only at baseline, or the end of the training period), or we could use this approach.
+
+We'll get that same dataset again:
+
+```{r}
+load('data/tworatedata.rda')
+baseline <- function(reachvector,blidx) reachvector - mean(reachvector[blidx], na.rm=TRUE)
+tworatedata[,4:ncol(tworatedata)] <- apply(tworatedata[,4:ncol(tworatedata)], FUN=baseline, MARGIN=c(2), blidx=c(17:32))
+reaches <- apply(tworatedata[4:ncol(tworatedata)], 
+            FUN=mean, 
+            MARGIN=c(1), 
+            na.rm=TRUE)
+sigma <- sd(as.matrix(tworatedata[4:ncol(tworatedata)] - mu), na.rm=T )
+schedule <- tworatedata$schedule
+```
+
+The model function is still the same:
+
+```{r}
+twoRateModel <- function(par, schedule) {
+  
+  # thse values should be zero at the start of the loop:
+  Et <- 0 # previous error: none
+  St <- 0 # state of the slow process: aligned
+  Ft <- 0 # state of the fast process: aligned
+  
+  # we'll store what happens on each trial in these vectors:
+  slow <- c()
+  fast <- c()
+  total <- c()
+  
+  # now we loop through the perturbations in the schedule:
+  for (t in c(1:length(schedule))) {
+    
+    # first we calculate what the model does
+    # this happens before we get visual feedback about potential errors
+    St <- (par['Rs'] * St) - (par['Ls'] * Et)
+    Ft <- (par['Rf'] * Ft) - (par['Lf'] * Et)
+    Xt <- St + Ft
+    
+    # now we calculate what the previous error will be for the next trial:
+    if (is.na(schedule[t])) {
+      Et <- 0
+    } else {
+      Et <- Xt + schedule[t]
+    }
+    
+    # at this point we save the states in our vectors:
+    slow <- c(slow, St)
+    fast <- c(fast, Ft)
+    total <- c(total, Xt)
+    
+  }
+  
+  # after we loop through all trials, we return the model output:
+  return(data.frame(slow,fast,total))
+  
+}
+```
+
+There will be an `sd` term in the parameters, but it is used in the likelihood function, not the model function:
+
+```{r}
+twoRateLikelihood <- function(par, schedule, reaches, checkStability=FALSE) {
+  
+  lowLikelihood <- 0
+  
+  Rf = par["Rf"];
+  Rs = par["Rs"];
+  Lf = par["Lf"];
+  Ls = par["Ls"];
+
+  # learning and retention rates of the fast and slow process are constrained:
+  if (Ls > Lf) {
+    return(lowLikelihood)
+  }
+  if (Rs < Rf) {
+    return(lowLikelihood)
+  }
+  
+  # stability constraints:
+  if (checkStability) {
+    
+    if ( ( ( (Rf - Lf) * (Rs - Ls) ) - (Lf * Ls)) <= 0 ) {
+      return(lowLikelihood)
+    }
+    
+    p <- Rf - Lf - Rs + Ls
+    q <- ( p^2 + (4 * Lf * Ls) )
+    if ( ((Rf - Lf + Rs - Ls) + (q^0.5)) >= 2 ) {
+      return(lowLikelihood)
+    }
+    
+  }
+  
+  # notice that SD comes from par, not reaches:
+  return( prod( dnorm((twoRateModel(par, schedule)$total - reaches), mean=0, sd=par['sd'])^(1/length(reaches)) ) )
+  
+} 
+```
+
+Since SD is part of the par function, it will fitted by `optimx()`. What are good starting values? In this case, we'll take the sd of the first 32 trials, the last 32 of training, and the last 10 in the error clamps, as a starting point, as well as some values around that.
+
+```{r}
+
+nvals <- 10
+
+parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
+
+noise <- sd(c( reaches[1:32]-mean(reaches[1:32], na.rm=T),
+               reaches[101:132]-mean(reaches[101:132], na.rm=T),
+               reaches[155:164]-mean(reaches[155:164], na.rm=T) 
+              )
+            )
+
+noise <- sigma
+
+searchgrid <- expand.grid('Ls'=parvals,
+                          'Lf'=parvals,
+                          'Rs'=parvals,
+                          'Rf'=parvals,
+                          'sd'=noise * parvals * 2)
+
+# evaluate starting positions:
+Likelihoods <- apply(searchgrid, FUN=twoRateLikelihood, MARGIN=c(1), schedule=schedule, reaches=reaches, checkStability=TRUE)
+
+# we need to tell optimx to maximize the likelihood:
+library(optimx)
+
+control <- list()
+control$maximize <- TRUE
+#control$fnscale <- -1 # do not use together with maximize
+
+# run optimx on the best starting positions:
+allfits <- do.call("rbind",
+                   apply( searchgrid[order(Likelihoods, decreasing = T)[1:10],],
+                          MARGIN=c(1),
+                          FUN=optimx,
+                          fn=twoRateLikelihood,
+                          method='L-BFGS-B',
+                          lower=c(0,0,0,0,0),
+                          upper=c(1,1,1,1,noise*2),
+                          schedule=schedule,
+                          reaches=reaches,
+                          checkStability=TRUE,
+                          control=control ) )
+
+# pick the best fit:
+win <- allfits[order(allfits$value, decreasing = T)[1],]
+print(par <- unlist(win[,1:6]))
+```
+
+Those values are very close to the previous fit: the first 3 decimals of each term are the same. The standard deviation the model finds is a bit larger than what we guessed fomr the stable parts of the data (1.972 instead of 1.512) but there are several good explanations for this. For example, it may be that the model is not a full account of the behavior, that is, there are some processes that affect behavior, but are not modeled, so that there are some systematic differences between model and behavior, which are captured by an increased noise term. Also, while we only used the more or less stable parts of the behavior to start estimating the noise term, this noise may actually be higher when behavior is changing.
+
+What is also happening is that the likelihood is much higher for this fit than previously. This might be expected, as the absolute maximum likelihood of every point will be higher when the noise is estimated lower. So our fitting function will aim for the lowest possible noise, to increase the likelihood. Of course, when the data _is_ actually noisy, more points will fall further away from this maximum, bringin down the likelihood again. So, I'm thinking that as long as models are all fitted the same way, it doesn't matter. Or, if bringing in extra noise terms to fit different sources of noise, does increase AIC, that might mean those sources of noise are somewhat credible.
