@@ -367,7 +367,8 @@ print(likelihoods <- c('MSE'=MSE_likelihood, 'L'=LIK_likelihood))
 
 The likelihood is different on the 8th decimal place, which I'm sure we can ignore. You can further verify that the solutions are the same by checking if the MSE is different or not for the solutions based on likelihood or MSE.
 
-The parameters are highly similar, the likelihoods are highly similar and perhaps you checked that the MSE is also highly similar. This means that fitting models with likelihood gives you the same solutions as fitting models with MSE. The advantage of MSE is that it is in the unit the data was recorded in, and the advantage of the likelihood is that it can be used for other computations down the line. It will help us get closer to expectation maximization and probably is useful if we want our models to include noise terms.
+The parameters are highly similar, the likelihoods are highly similar and perhaps you checked that the MSE is also highly similar. This means that fittind models with likelihood gives you the same solutions as fitting models with MSE. The advantage of MSE is that it is in the unit the data was recorded in, and the advantage of the likelihood is that it can be used for other computations down the line. It will help us get closer to expectation maximization and probably is useful if we want our models to include noise terms.
+
 
 ## Noise as part of the model
 
