@@ -9,7 +9,7 @@ author: Marius 't Hart
 ---
 
 ```{r setup, cache=FALSE, include=FALSE}
-install.packages('knitr')
+#install.packages('knitr')
 library(knitr)
 opts_chunk$set(comment='', eval=FALSE)
 ```
