@@ -9,7 +9,243 @@ output:
 
 ```{r setup, cache=FALSE, include=FALSE}
 library(knitr)
-opts_chunk$set(comment='', eval=FALSE)
+#opts_chunk$set(comment='', eval=FALSE)
 ```
 
-Common statistics often assume a specific distribution of data, usually some "normal" distribution. The distributions of the data, as represented by the variance, or a standard deviation is then used to determine "significance". 
+Common statistics often assume a specific distribution of data, usually some "normal" distribution. The distributions of the data, as represented by the variance, or a standard deviation is then used to determine "significance" expressed as a p-value. What a p-value really is, seems to be hard for non-statisticians to say, to the frustration of statisticians. However, I will try, as it is linked to the ideas behind confidence intervals and bootstrapping.
+
+**P-value:** _The probability of observing this result or a more extreme one, under the null-hypothesis._
+
+Let's unpack this for a t-test, using the first example from the tutorial on t-tests, where we compare the IQ scores of kinesiology students to the theoretical mean of the overall population (~100). We load the data:
+
+```{r}
+IQ <- read.csv('data/Tutorial_2A_IQscores.csv', stringsAsFactors = F)
+str(IQ)
+```
+
+If we run a t-test where we test if the measured IQ-scores are different from 100, that would look like this:
+
+```{r}
+t.test(IQ$IQscores, mu=100)
+```
+
+You should now notice that there is a confidence interval mentioned in this output. It spans from 100.9599 to 112.9068. The confidence interval here is calculated based on the assumption that the data comes from a Student t distribution, and we'll see how to do that later on. For now, the sample mean (106.9333) is right in the middle of the confidence interval, and given the way it is calculated here, that is necessarily true. Also, the theoretical population mean of 100 falls outside this confidence interval. This has meaning: if it were within the confidence interval, we would conclude there is no (significant) difference between the mean of our sample of kinesiology students and the theoretical population mean. This is also expressed by the p-value .026 which is below the traditional cut-off level (alpha) of .05, so this says the same thing as the confidence interval.
+
+# Student T Distribution
+
+Let's have a look at the functions that R provides to work with the Student t distribution:
+
+```{r}
+help(TDist)
+```
+
+The function `pt()` allows plotting the shape of the distribution as you may remember it from statistics courses. We'll plot it for `df=14` which should correspond to our sample of IQ scores (N=15).
+
+```{r tdist, fig.width=8, fig.height=4}
+df <- 14
+q <- seq(-3,3,0.1)
+p <- seq(.005,.995,.01)
+par(mfrow=c(1,2))
+plot(q,dt(x=q,df=df),type='l',bty='n')
+plot(p,qt(p,df=df,lower.tail = T),type='l',bty='n') # try switching lower.tail to FALSE
+```
+
+The first plot shows the probability density over the quantiles. The second plot shows quantiles over cumulative probabilities. We can use the latter to obtain a z-score (or quantile) that matches the part of the distribution we consider as the interval of confidence.
+
+```{r}
+# we'll get a 95% confidence interval
+conf.level <- 0.95
+
+# this is the z-score for that interval
+z = qt((1 - conf.level)/2, df = length(IQ$IQscores)-1, lower.tail = FALSE)
+
+# we will also need the mean and SEM
+xbar = mean(IQ$IQscores)
+sdx = sqrt(var(IQ$IQscores)/length(IQ$IQscores)) # SEM, or standard error of the mean
+    
+# now we get the confidence interval,
+# by multiplying the z-score (for 1 SEM) with the actual SEM
+# and adding / subtracting it to / from the mean of the sample
+confidence.interval <- c(xbar - z * sdx, xbar + z * sdx)
+
+# and we show the result:
+print(confidence.interval)
+```
+
+This should print the exact same numbers as the t-test printed for the confidence interval.
+
+Now does this really correspond to the p-value significance? That seems weird... I won't prove it here (because I don't know how), but I'll show it by running the t-test with mu values that are just inside or just outside the confidence interval. Here my is just inside, so that the t-test should not be "significant":
+
+```{r}
+t.test(IQ$IQscores, mu=confidence.interval[1]+.001)
+```
+
+And the p-value is just above .05 so that worked. Here it is just outside the confidence interval, so that the t-test should be "significant":
+
+```{r}
+t.test(IQ$IQscores, mu=confidence.interval[1]-.001)
+```
+
+This also works. So this explains why showing confidence intervals in figures is popular: if you have means and confidence intervals of several samples, they directly show statistically meaningful differences between the samples. Of course, they do so without controlling for multiple comparisons, but it is more informative than a standard deviation or a standard error of the mean.
+
+# Bootstrapping
+
+Sometimes, we can't use the Student t distribution, because the data is not normally distributed. In that case, we can bootstrap the confidence interval. We'll stick to this application of bootstrapping here, because I have no experience with other applications. Bootstrapping is a form of a Monte Carlo method where we use lots of random numbers to simulate what would happen in many cases. This has to do with that definition of a p-value, so let's go back to it:
+
+**P-value:** _The probability of observing this result or a more extreme one, under the null-hypothesis._
+
+So if we have many, many observations, we could also calculate the probability of observing a result (or a more extreme one), and by using simulations, we do get those many, many observations. When the data, and the descriptive you're interested in, the process is fairly straighforward and doing around 1000 simulations is usually enough to get more or less the same result every time. I'm going to assume that this is the case here.
+
+Basically, we're going to sample from the data _with_ replacement, and calculate the mean on this sample, and then redo that 1000 times. We then look at the distribution of the means that we got. However, we'll implement it slightly more efficiently by getting all random samples at once and putting them in a 1000 x 15 matrix: one row for every re-sampling of 15 from the original dataset.
+
+```{r}
+samplematrix <- matrix(sample(IQ$IQscores, size = 1000*length(IQ$IQscores), replace = TRUE), nrow = 1000)
+BS <- apply(samplematrix, c(1), FUN=mean)
+
+lo <- (1-conf.level)/2. # conf.level was set above to be 0.95
+hi <- 1 - lo
+
+bootstrapped.CI <- quantile(BS, probs = c(lo,hi))
+print(bootstrapped.CI)
+```
+
+Every time you run the above chunk, it will give slightly different results, but you will notice that it's fairly similar to the confidence interval we got earlier: 100.9599 112.9068. For me, the bootstrapped confidence interval sees to be a bit smaller than the calculated one. This may be because the sample is not exactly normally distributed.
+
+You can play with the above chunk of code. For example, in the second line with the call to `apply()`, you can change the FUN argument to `median` or `sd` or some other descriptive statistic, and you'd get the confidence interval for that, instead of for the mean. So while, a t-test can be used to compare the means of two samples, with bootstrapping you're not restricted to the mean, but you can compare samples using other statistics.
+
+# Take-Home-Function
+
+Here I've put everything together in a handy function that will get you confidence intervals for any single sample:
+
+```{r}
+getConfidenceInterval <- function(data, 
+                                  variance = var(data, na.rm=T), 
+                                  conf.level = 0.95, 
+                                  method = 't-distr', 
+                                  resamples = 1000, 
+                                  FUN = mean) 
+{
+  
+  data <- data[which(is.finite(data))] #deal with missing values
+  
+  if (method %in% c('t-distr','t')) {
+    
+    z = qt((1 - conf.level)/2, df = length(data) - 1, lower.tail = FALSE)
+    
+    xbar = mean(data)
+    sdx = sqrt(variance/length(data))
+    
+    return(c(xbar - z * sdx, xbar + z * sdx))
+    
+  }
+  
+  # add sample z-distribution?
+  
+  if (method %in% c('bootstrap','b')) {
+    
+    samplematrix <- matrix(sample(data, size = resamples*length(data), replace = TRUE), nrow = resamples)
+    BS <- apply(samplematrix, c(1), FUN=FUN) 
+    
+    lo <- (1-conf.level)/2.
+    hi <- 1 - lo
+    
+    return(quantile(BS, probs = c(lo,hi)))
+    
+  }
+  
+}
+```
+
+# Compare correlation coefficients
+
+You may have guessed it: if you want to say if one correlation's Pearson coefficient is different from another, there is no simple statistical test for this, but we can use bootstrapping.
+
+We'll use the data from the statistics tutorial on correlation and regression:
+
+```{r}
+BMI <- read.csv('data/Tutorial_8_BMI.csv', stringsAsFactors = F)
+str(BMI)
+```
+
+Both percentage carbs in diet (carbpercent) and physical activity (physact) had a correlation with body mass index (BMI). But which one is larger?
+
+```{r}
+cor(BMI$BMI, BMI$carbpercent)
+cor(BMI$BMI, BMI$physact)
+```
+
+So there might be a difference in that percentage carbs in diet is more predictive of body mass index than physical activity. But how can we test this? First, we will check if they are they both (significant) predictors of body mass index:
+
+```{r}
+print(cor.test(BMI$carbpercent, BMI$BMI))
+print(cor.test(BMI$physact, BMI$BMI))
+```
+
+Both of them are. However, the magnitude of the p-value won't tell us anything here, not even if one is below 0.05 and the other isn't. But we can bootstrap the 95% confidence interval of the difference between correlation coefficients.
+
+Here we set some variables that you can play with if you like:
+
+```{r}
+bootstraps <- 10000
+N <- dim(BMI)[1]
+```
+
+First we get matrices with random re-sampling for all three variables.
+
+```{r}
+idx <- sample(c(1:N), size = bootstraps*N, replace = TRUE)
+
+BMI.sample         <- matrix(BMI$BMI[idx],         nrow = bootstraps)
+carbpercent.sample <- matrix(BMI$carbpercent[idx], nrow = bootstraps)
+physact.sample     <- matrix(BMI$physact[idx],     nrow = bootstraps)
+```
+
+And we'll make big 3D arrays:
+
+```{r}
+carbpercent.array <- array(data=NA,dim=c(bootstraps,N,2))
+carbpercent.array[,,1] <- BMI.sample
+carbpercent.array[,,2] <- carbpercent.sample
+
+physact.array <- array(data=NA,dim=c(bootstraps,N,2))
+physact.array[,,1] <- BMI.sample
+physact.array[,,2] <- physact.sample
+```
+
+Since the `cor()` function can take a matrix as input, we can get a correlation coefficient for every point on the first dimension of those two arrays, by using `apply()`. However, with matrix input, `cor()` also returns a matrix, of which we are only interested in one of the numbers. So for smoother handling later on, we'll make function that gets us the correlation coefficient for a single matrix-style input:
+
+```{r}
+corcoeff <- function(m) {
+  return(abs(cor(as.matrix(m))[2]))
+}
+```
+
+We can use this in `apply()`:
+
+```{r}
+CP.r <- apply(carbpercent.array, MARGIN=c(1), FUN=corcoeff)
+PA.r <- apply(physact.array, MARGIN=c(1), FUN=corcoeff)
+```
+
+OK, so now we have a lot of correlation coefficients from randomly resamples bits of the original data frame. How can we get a confidence interval. We can just get them from those two vectors: 
+
+```{r}
+print(quantile(CP.r, probs=c(0.025, 0.975)))
+print(quantile(PA.r, probs=c(0.025, 0.975)))
+```
+
+The correlation coefficients (.64 and .53) are well within both confidence intervals, so this would mean no difference. But we can do a different test. The correlation coefficients in each of those vectors came from the same sub-samples of the data, so that we can subtract one from the other without issue to get the differences in correlation coefficients and then get the 95% confidence interval for the difference:
+
+```{r}
+print(quantile(CP.r - PA.r, probs=c(0.025, 0.975)))
+```
+
+This may seem like a closer call, but since 0 is within the confidence interval (at least, with my random samples it is), we'll condclude that the two factors impulse control and percentage carbs in diet are not differently correlated with body mass index. The advantage of this approach is that it also works if one set of descriptives has a very different variance, in that case, it may happen that the descriptive from one sample falls within the confidence interval of the other, but not vice versa. Which one is right then?
+
+Also, the way we sampled above (with the `idx` vector) ensured that the correlation coefficients were paired. Do they have to be? If not, we would have more freedom in the tests we do with bootstrapping confidence intervals. We can test that with our example data:
+
+```{r}
+print(quantile(CP.r - sample(PA.r), probs=c(0.025, 0.975)))
+```
+
+The confidence interval is only marginally different here, but tends to be (a bit) larger. This makes sense: we should have less confidence in the difference as it is based on unpaired random sampling now. So if you can; use a paired sampling approach, but if you can't, it is fine without, but you get less power.
