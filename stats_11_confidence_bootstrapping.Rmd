@@ -74,13 +74,13 @@ print(confidence.interval)
 
 This should print the exact same numbers as the t-test printed for the confidence interval.
 
-Now does this really correspond to the p-value significance? That seems weird... I won't prove it here (because I don't know how), but I'll show it by running the t-test with mu values that are just inside or just outside the confidence interval. Here my is just inside, so that the t-test should not be "significant":
+Now does this really correspond to the p-value significance? That seems weird... I won't prove it here (because I don't know how), but I'll show it by running the t-test with mu values that are just inside or just outside the confidence interval. Here mu is just inside the confidence interval, so that the t-test should not be "significant":
 
 ```{r}
 t.test(IQ$IQscores, mu=confidence.interval[1]+.001)
 ```
 
-And the p-value is just above .05 so that worked. Here it is just outside the confidence interval, so that the t-test should be "significant":
+And the p-value is just above .05 so that worked. Next, I set the mu to be just outside the confidence interval, so that the t-test should be "significant":
 
 ```{r}
 t.test(IQ$IQscores, mu=confidence.interval[1]-.001)
@@ -90,17 +90,21 @@ This also works. So this explains why showing confidence intervals in figures is
 
 # Bootstrapping
 
-Sometimes, we can't use the Student t distribution, because the data is not normally distributed. In that case, we can bootstrap the confidence interval. We'll stick to this application of bootstrapping here, because I have no experience with other applications. Bootstrapping is a form of a Monte Carlo method where we use lots of random numbers to simulate what would happen in many cases. This has to do with that definition of a p-value, so let's go back to it:
+Sometimes, we can't use the Student t distribution, because the data is not normally distributed, or you're not interested in the mean as a descriptive statistic (it happens). In that case, we can bootstrap the confidence interval. We'll stick to this application of bootstrapping here, because I have no experience with other applications. Bootstrapping is a form of a Monte Carlo method where we use lots of random numbers to simulate what would happen in many cases. This has to do with that definition of a p-value, so let's go back to it:
 
 **P-value:** _The probability of observing this result or a more extreme one, under the null-hypothesis._
 
-So if we have many, many observations, we could also calculate the probability of observing a result (or a more extreme one), and by using simulations, we do get those many, many observations. When the data, and the descriptive you're interested in, the process is fairly straighforward and doing around 1000 simulations is usually enough to get more or less the same result every time. I'm going to assume that this is the case here.
+So if we have many, many observations, we could also calculate the probability of observing a result (or a more extreme one), as we can just take the percentage of those observations where the results was as extreme or more extreme than the one we actualy got. By using simulations, we are able to get those many, many observations, relatively cheaply. When you only have one dataset, so that the descriptive you're interested in can be compared to a single other value, the process is fairly straighforward. Doing around 1000 simulations is usually enough to get more or less the same result every time. I'm going to use the same IQ example, so we can see how bootstrapping the confidence interval compares to calculating it. That case is also fairly simple, so that we can start with (hopefully) easy to understand code.
 
-Basically, we're going to sample from the data _with_ replacement, and calculate the mean on this sample, and then redo that 1000 times. We then look at the distribution of the means that we got. However, we'll implement it slightly more efficiently by getting all random samples at once and putting them in a 1000 x 15 matrix: one row for every re-sampling of 15 from the original dataset.
+Basically, we're going to sample from the data _with_ replacement, and calculate the mean on this sample, store that mean and then redo that 1000 times. We then look at the distribution of the 1000 means that we got. However, we'll implement it slightly more efficiently by getting all random samples at once and putting them in a 1000 x 15 matrix: one row for every re-sampling of 15 from the original dataset.
 
 ```{r}
-samplematrix <- matrix(sample(IQ$IQscores, size = 1000*length(IQ$IQscores), replace = TRUE), nrow = 1000)
-BS <- apply(samplematrix, c(1), FUN=mean)
+samplematrix <- matrix( sample(IQ$IQscores, 
+                               size = 1000*length(IQ$IQscores), 
+                               replace = TRUE), 
+                        nrow = 1000)
+
+BS <- apply(samplematrix, c(1), FUN=mean) # we apply the function `mean` to every row of the matrix with samples
 
 lo <- (1-conf.level)/2. # conf.level was set above to be 0.95
 hi <- 1 - lo
@@ -109,9 +113,9 @@ bootstrapped.CI <- quantile(BS, probs = c(lo,hi))
 print(bootstrapped.CI)
 ```
 
-Every time you run the above chunk, it will give slightly different results, but you will notice that it's fairly similar to the confidence interval we got earlier: 100.9599 112.9068. For me, the bootstrapped confidence interval sees to be a bit smaller than the calculated one. This may be because the sample is not exactly normally distributed.
+Every time you run the above chunk, it will give slightly different results, but you will notice that it's fairly similar to the confidence interval we got earlier: 100.9599 112.9068. For me, the bootstrapped confidence interval sees to be a bit smaller than the calculated one. This may be because the original data is not exactly normally distributed.
 
-You can play with the above chunk of code. For example, in the second line with the call to `apply()`, you can change the FUN argument to `median` or `sd` or some other descriptive statistic, and you'd get the confidence interval for that, instead of for the mean. So while, a t-test can be used to compare the means of two samples, with bootstrapping you're not restricted to the mean, but you can compare samples using other statistics.
+You can play with the above chunk of code. For example, in the second line with the call to `apply()`, you can change the FUN argument to `median` or `sd` or some other descriptive statistic, and you'd get the confidence interval for that, instead of for the mean. So while, a t-test can be used to compare the means of two samples (or one, to some mu), with bootstrapping you're not restricted to the mean, but you can compare samples using other statistics.
 
 # Take-Home-Function
 
@@ -156,9 +160,11 @@ getConfidenceInterval <- function(data,
 }
 ```
 
+You can use the two methods, we explored so far: using the t distribution ('t' or 't-distr') or bootstrapping ('b' or 'bootstrap'). When using the t distribution approach, you _can_ set the variance of the data (but only if you know what you're doing) but by default it will calculate the variance using the actual data. You can also set the confidence level (default: 0.95). If you are using bootstrapping, you can set the confidence level with the same parameter, but the variance argument is not used. You can however, specify the number of bootstrap samples (default: 1000), and which function to apply over all of the samples (default: mean). While not perfect, this function should take care of a lot of your bootstrapping needs.
+
 # Compare correlation coefficients
 
-You may have guessed it: if you want to say if one correlation's Pearson coefficient is different from another, there is no simple statistical test for this, but we can use bootstrapping.
+You may have guessed it by the title of this section: if you want to say if one correlation's Pearson coefficient is different from another, there is no simple statistical test for this, but we can use bootstrapping. (Caveat: if you have many actual sets of correlations, e.g. one per participant, you can use regular t-tests and ANOVAs on the correlation coefficients.)
 
 We'll use the data from the statistics tutorial on correlation and regression:
 
@@ -174,7 +180,7 @@ cor(BMI$BMI, BMI$carbpercent)
 cor(BMI$BMI, BMI$physact)
 ```
 
-So there might be a difference in that percentage carbs in diet is more predictive of body mass index than physical activity. But how can we test this? First, we will check if they are they both (significant) predictors of body mass index:
+So there might be a difference in that the percentage carbs in diet is more predictive of body mass index than physical activity. But how can we test if this numerical difference is (statistically) meaningful? First, we will check if they are both (significant) predictors of body mass index:
 
 ```{r}
 print(cor.test(BMI$carbpercent, BMI$BMI))
@@ -183,7 +189,7 @@ print(cor.test(BMI$physact, BMI$BMI))
 
 Both of them are. However, the magnitude of the p-value won't tell us anything here, not even if one is below 0.05 and the other isn't. But we can bootstrap the 95% confidence interval of the difference between correlation coefficients.
 
-Here we set some variables that you can play with if you like:
+In the chunk below, we set some variables that you can play with if you like:
 
 ```{r}
 bootstraps <- 10000
@@ -193,14 +199,16 @@ N <- dim(BMI)[1]
 First we get matrices with random re-sampling for all three variables.
 
 ```{r}
+# we create one long vector of random indices of rows into our original data frame:
 idx <- sample(c(1:N), size = bootstraps*N, replace = TRUE)
 
+# we use the indices to get "paired" randomly sampled data:
 BMI.sample         <- matrix(BMI$BMI[idx],         nrow = bootstraps)
 carbpercent.sample <- matrix(BMI$carbpercent[idx], nrow = bootstraps)
 physact.sample     <- matrix(BMI$physact[idx],     nrow = bootstraps)
 ```
 
-And we'll make big 3D arrays:
+And we'll make big 3D arrays, where the first dimension (rows) corresponds to the bootstrapping iterations, the second dimension (columns) corresponds to individual randomly drawn datums, and the third dimension (layers?) will correspond to the two variables we want to correlate. The first 'layer' will have BMI, the second 'layer' will have either percentage of carbs in diet or physical activity:
 
 ```{r}
 carbpercent.array <- array(data=NA,dim=c(bootstraps,N,2))
@@ -212,7 +220,7 @@ physact.array[,,1] <- BMI.sample
 physact.array[,,2] <- physact.sample
 ```
 
-Since the `cor()` function can take a matrix as input, we can get a correlation coefficient for every point on the first dimension of those two arrays, by using `apply()`. However, with matrix input, `cor()` also returns a matrix, of which we are only interested in one of the numbers. So for smoother handling later on, we'll make function that gets us the correlation coefficient for a single matrix-style input:
+Since the `cor()` function can take a matrix as input, we can get a correlation coefficient for every point on the first dimension of those two arrays, by using `apply()`. However, with matrix input, `cor()` also returns a matrix, of which we are only interested in one of the 4 numbers. So for smoother handling later on, we'll make function that gets us the correlation coefficient for a single matrix-style input:
 
 ```{r}
 corcoeff <- function(m) {
@@ -220,32 +228,38 @@ corcoeff <- function(m) {
 }
 ```
 
-We can use this in `apply()`:
+We can use this function for the FUN argument in `apply()`:
 
 ```{r}
 CP.r <- apply(carbpercent.array, MARGIN=c(1), FUN=corcoeff)
 PA.r <- apply(physact.array, MARGIN=c(1), FUN=corcoeff)
 ```
 
-OK, so now we have a lot of correlation coefficients from randomly resamples bits of the original data frame. How can we get a confidence interval. We can just get them from those two vectors: 
+OK, so now we have a lot of correlation coefficients from randomly resamples bits of the original data frame. We could get confidence intervals simply from those two vectors: 
 
 ```{r}
 print(quantile(CP.r, probs=c(0.025, 0.975)))
 print(quantile(PA.r, probs=c(0.025, 0.975)))
 ```
 
-The correlation coefficients (.64 and .53) are well within both confidence intervals, so this would mean no difference. But we can do a different test. The correlation coefficients in each of those vectors came from the same sub-samples of the data, so that we can subtract one from the other without issue to get the differences in correlation coefficients and then get the 95% confidence interval for the difference:
+The correlation coefficients (.64 and .53) are well within both confidence intervals, so this would mean no difference. But we can do a different test (I'd argue a better test). The correlation coefficients in each of those vectors came from the same sub-samples of the data, so that we can subtract one from the other without issue to get the differences in correlation coefficients and then get the 95% confidence interval for the _difference_ in correlation coefficients:
 
 ```{r}
 print(quantile(CP.r - PA.r, probs=c(0.025, 0.975)))
 ```
 
-This may seem like a closer call, but since 0 is within the confidence interval (at least, with my random samples it is), we'll condclude that the two factors impulse control and percentage carbs in diet are not differently correlated with body mass index. The advantage of this approach is that it also works if one set of descriptives has a very different variance, in that case, it may happen that the descriptive from one sample falls within the confidence interval of the other, but not vice versa. Which one is right then?
+This may seem like a closer call, but since 0 is within the confidence interval (at least, with my random samples it is), we'll still condclude that the two factors impulse control and percentage carbs in diet are not differently correlated with body mass index.
 
-Also, the way we sampled above (with the `idx` vector) ensured that the correlation coefficients were paired. Do they have to be? If not, we would have more freedom in the tests we do with bootstrapping confidence intervals. We can test that with our example data:
+The advantage of this approach is that it also works if one set of descriptives has a very different variance, in that case, it may happen that the descriptive from one sample falls within the confidence interval of the other, but not vice versa. By getting the confidence interval of differences, you then avoid having to pick which one is the correct confidence interval, because there is only one. For reliable results, this usually does require some more bootstrap iterations. And this is why I set that to 10000 for this example.
+
+Also, the way we sampled above (with the `idx` vector) ensured that the correlation coefficients were paired. Do they have to be? If not, we would have more freedom in the tests we do with bootstrapping confidence intervals. We can test that with our example data, by simply shuffling one of the vectors:
 
 ```{r}
 print(quantile(CP.r - sample(PA.r), probs=c(0.025, 0.975)))
 ```
 
-The confidence interval is only marginally different here, but tends to be (a bit) larger. This makes sense: we should have less confidence in the difference as it is based on unpaired random sampling now. So if you can; use a paired sampling approach, but if you can't, it is fine without, but you get less power.
+The confidence interval is only marginally different here, but tends to be larger. This makes sense: we should have less confidence in the difference as it is based on unpaired random sampling now. So if you can; use a paired sampling approach, but if you can't, it is still fine without, but you get less power.
+
+# Conclusion
+
+The material here should get you started with understanding confidence intervals a bit better, especially how they are related to significance testing (and p-values). Hopefully, you will also be able to use bootstrapping to get confidence intervals in cases where regular statistics are less helpful.
