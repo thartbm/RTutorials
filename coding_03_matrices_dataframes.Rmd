@@ -70,7 +70,7 @@ Most importantly, matrices can be used to do matrix algebra, which will probably
 
 # Data Frames
 
-Run this chunk to see what a dara frame usually looks like:
+Run this chunk to see what a data frame usually looks like:
 
 ```{r show_simple_df}
 col1 <- c('[1,1]','[2,1]','[3,1]')
@@ -93,7 +93,7 @@ my_df[ x ]
 my_df[ y ]
 ```
 
-This chunk has two output windows, that you can select by clicking on the two rectangles at the top. By default, the last generated output will be selected. If you managed to complete the code as specified you will notice that the output is different. When you ask for a row of the data frame, you get a data frame with a single row, but there are still column names. When you ask for a column of the data frame, you get a character vector. Why is this?
+This chunk has two output windows, that you can select by clicking on the two rectangles at the top. By default, the last generated output will be selected. If you managed to complete the code as specified you will notice that the output is different. When you ask for a row of the data frame, you get a data frame with a single row, but there are still column names. When you ask for a column of the data frame, you get a character vector (or a list). Why is this?
 
 ## Cases and variables
 
@@ -154,19 +154,19 @@ trees[,'Girth']
 
 While you can use the row names in indexing similarly, you can't use the earlier dollar notation for rows, only columns. Since columns are supposed to have one variable, and each row has a case or observation, you can use column names in formula's to express relationships between variables.
 
-For example, for pine trees you might suspect that the height of the tree depends on age. Let's plot that first:
+For example, for pine trees you might suspect that the height of the tree is related to age. Let's plot that first:
 
 ```{r}
 plot(trees$Height,trees$Volume)
 ```
 
-But you could have done that with simple indexing as well (`plot(trees[,2], trees[,3])`). So here's an example that only works only for column names: what if the height of the trees depends on both age and Seed? You can create a simple linear model for that with the `lm()` function (don't worry about the details of that for now):
+But you could have done that with simple indexing as well (`plot(trees[,2], trees[,3])`). So here's an example that only works only for column names: what if the Volume of the trees depends on both Girth and Height? You can create a simple linear model for that with the `lm()` function (don't worry about the details of that for now):
 
 ```{r}
 lm(Volume ~ Girth + Height, data=trees)
 ```
 
-You get a linear model that predicts the volume of a black cherry tree as: `(Girth * 4.7082) + (Height * 0.3393) - 57.9877`. Whether or not this model makes sense is another matter, but the point is that you have to put the variables that matter to you in separate columns. Well, it _can_ be done the other way around -- I tried -- but it takes way more effort. So let's just make data frames work for you.
+You get a linear model that predicts the volume of a pine tree as: `(Girth * 4.7082) + (Height * 0.3393) - 57.9877`. Whether or not this model makes sense is another matter, but the point is that you have to put the variables that matter to you in separate columns. Well, it _can_ be done the other way around -- I tried -- but it takes way more effort. So let's just make data frames work for you.
 
 ## Factors
 
