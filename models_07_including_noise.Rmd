@@ -1,74 +1,164 @@
 ---
-title: "Model Fitting: Including Noise"
+title: "Model Fitting: Models with Noisy Processes"
 output: html_notebook
 ---
 
-You might have come across models that include a noise term, and might have wondered about them. Here I'll try out one possible way to include noise. It builds on the likelihood approach. However, we won't use the standard deviation in the data, to determine the likelihood of the model's prediction. Instead, we'll fit the standard deviation, so that we can determine the likelihood of the data, given the model, and optimize that.
-
-If I'm correct, this should lead to the same solution. However, this approach doesn't require that we know the standard deviation of the data. Say, if we have two-rate schedule data for one participant only, we could somehow extract standard deviations from the data (only at baseline, or the end of the training period), or we could use this approach.
-
-We'll get that same dataset again:
-
-```{r}
-load('data/tworatedata.rda')
-baseline <- function(reachvector,blidx) reachvector - mean(reachvector[blidx], na.rm=TRUE)
-tworatedata[,4:ncol(tworatedata)] <- apply(tworatedata[,4:ncol(tworatedata)], FUN=baseline, MARGIN=c(2), blidx=c(17:32))
-reaches <- apply(tworatedata[4:ncol(tworatedata)], 
-            FUN=mean, 
-            MARGIN=c(1), 
-            na.rm=TRUE)
-sigma <- sd(as.matrix(tworatedata[4:ncol(tworatedata)] - mu), na.rm=T )
-schedule <- tworatedata$schedule
+```{r setup, cache=FALSE, include=FALSE}
+library(knitr)
+#opts_chunk$set(comment='', eval=FALSE)
 ```
 
-The model function is still the same:
+Some models are specified with noise terms. Sometimes these are called error terms, but since we use (reach) errors in our model, I'll call them noise here. Up to now we've been ignoring noise, and in order to fit group data, it doesn't matter much, as the noise is expected to cancel out in the group average. However, when fitting individual data, it might make more sense to to also estimate how noisy some processes in the model are. This is in part hard because we don't have an estimate of variance on every individual trial, since we only have 1 data point along the learning curve. Let's see how this changes the two-rate model. Up to now, we've used this version:
+
+$x^{t} ~= s^{t} + f^{t}$
+
+Here $x^t$ is the reach direction $x$ the model predicts on trial $t$, which is the sum of the slow state $s$ and the fast state $f$ (on the same trial). The slow and fast state are given by:
+
+slow process state: $s^{t} ~= r_s \cdot s^{t-1} - l_s \cdot e^{t-1}$
+
+fast process state: $f^{t} ~= r_f \cdot f^{t-1} - l_f \cdot e^{t-1}$
+
+Here $t-1$ indicates values of variables on the previous trial. Both the slow and fast state retain some fraction ($r_s$ and $r_f$ respectively) of their previous state. They also each compensate for part of the error $e$ on the previous trial ($l_s$ and $l_f$ respectively).
+
+As you know we run this across a sequence of k trials $t_{1:k}$ and then have a perturbation schedule $\mathbf{p}_{1:k}$ which is a vector of values determined by the experiment (in our case with the rotation of the feedback in degrees), and it dictates the error:
+
+$e^t ~= x^t - p^t$
+
+Except when there is an error-clamp trial, which for now will simply set the error to 0. We'll also usually start the model with the two states and the previous error at 0.
+
+The two retention rates and two learning rates are the parameters of the model we've been fitting so far.
+
+The above model is completely deterministic: every time you feed it the same parameter values and perturbation schedule it will generate the exact same set of outputs, but that's perhaps not very realistic. At least, it's not what people do. There are several ways we can think of in which we end up with noisy deviations from this. For example, the estimate of the error might be slightly off one way or another for several reasons, or the execution of the intended movement is off somewhat. For now, we'll consider movement execution noise only. It is the simpler case, as it's the same for all kinds of trials, and all equations remain the same, except the one that determines the system output. This will now be:
+
+$x^{t} ~= s^{t} + f^{t} + \epsilon_{\sigma_m^2}$
+
+This epsilon does not have a fixed value: it will change on every trial. It will be drawn from a known distribution, so we can somewhat control it. We will use the normal distribution with mean 0 and some standard deviation ($\sigma_m^2$). (Make sure not to confuse the reach error $e$ with the execution noise $\epsilon$.)
+
+Since the error on the next trial $e^{t+1}$ depends on $x^t$ (as well as the pertubation) the noise we happen to add to the executed movement $x^t$ at every trial will affect the next trial to some degree, and this will percolate through the rest of the sequence as well. This may fundamentally change the way the model works. Unfortunately, it also means we can't just run the model once, as the output will be different each and every time. In fact, the spread of the output will depend on that standard deviation and we do want to keep everything realistic, including our estimate of motor execution noise, so it will have to be fit as well. But how?
+
+# First attempt
+
+Here's a first attempt. Where it starts with the model function. Instead of running the model once, we run it a number of times, and this number will be an argument to the function. In the end, we will then get a mean and a standard deviation for all the responses on every trial. This defines a likelihood function, that we will use to compute the likelihood of the data given the model.
+
+Let's begin.
 
 ```{r}
-twoRateModel <- function(par, schedule) {
+twoRateModel <- function(par, schedule, iterations=30) {
   
-  # thse values should be zero at the start of the loop:
-  Et <- 0 # previous error: none
-  St <- 0 # state of the slow process: aligned
-  Ft <- 0 # state of the fast process: aligned
+  # for this implementation we will store what happens in a set of matrices:
+  slow_mat <- matrix(data=NA, nrow=length(schedule), ncol=iterations)
+  fast_mat <- matrix(data=NA, nrow=length(schedule), ncol=iterations)
+  total_mat <- matrix(data=NA, nrow=length(schedule), ncol=iterations)
   
-  # we'll store what happens on each trial in these vectors:
-  slow <- c()
-  fast <- c()
-  total <- c()
-  
-  # now we loop through the perturbations in the schedule:
-  for (t in c(1:length(schedule))) {
+  for (it in c(1:iterations)) {
     
-    # first we calculate what the model does
-    # this happens before we get visual feedback about potential errors
-    St <- (par['Rs'] * St) - (par['Ls'] * Et)
-    Ft <- (par['Rf'] * Ft) - (par['Lf'] * Et)
-    Xt <- St + Ft
+    # these values should be zero at the start of the loop:
+    Et <- 0 # previous error: none
+    St <- 0 # state of the slow process: aligned
+    Ft <- 0 # state of the fast process: aligned
     
-    # now we calculate what the previous error will be for the next trial:
-    if (is.na(schedule[t])) {
-      Et <- 0
-    } else {
-      Et <- Xt + schedule[t]
+    # now we loop through the perturbations in the schedule:
+    for (t in c(1:length(schedule))) {
+      
+      # first we calculate what the model does
+      # this happens before we get visual feedback about potential errors
+      St <- (par['Rs'] * St) - (par['Ls'] * Et)
+      Ft <- (par['Rf'] * Ft) - (par['Lf'] * Et)
+      Xt <- St + Ft + rnorm(1, 0, par['sd'])
+      
+      # now we calculate what the previous error will be for the next trial:
+      if (is.na(schedule[t])) {
+        Et <- 0
+      } else {
+        Et <- Xt + schedule[t]
+      }
+      
+      # at this point we save the states in our matrices:
+      slow_mat[t,it] <- St
+      fast_mat[t,it] <- Ft
+      total_mat[t,it] <- Xt
+      
     }
-    
-    # at this point we save the states in our vectors:
-    slow <- c(slow, St)
-    fast <- c(fast, Ft)
-    total <- c(total, Xt)
     
   }
   
+  # after all this, we can get the mean and sd for the processes and total output
+  slow_m <- apply(slow_mat, MARGIN=c(1), FUN=mean)
+  slow_s <- apply(slow_mat, MARGIN=c(1), FUN=sd)
+  fast_m <- apply(fast_mat, MARGIN=c(1), FUN=mean)
+  fast_s <- apply(fast_mat, MARGIN=c(1), FUN=sd)
+  total_m <- apply(total_mat, MARGIN=c(1), FUN=mean)
+  total_s <- apply(total_mat, MARGIN=c(1), FUN=sd)
+  
   # after we loop through all trials, we return the model output:
-  return(data.frame(slow,fast,total))
+  return(data.frame(slow_m,slow_s,fast_m,fast_s,total_m,total_s))
   
 }
 ```
 
-There will be an `sd` term in the parameters, but it is used in the likelihood function, not the model function:
+We'll run it, with the winning parameters from a previous model, and we need to get the schedule:
 
 ```{r}
-twoRateLikelihood <- function(par, schedule, reaches, checkStability=FALSE) {
+# we also add a noise term, that is, we draw noise from a standard normal distribution
+# with mean 0 and this standard deviation
+par <- c('Ls'=0.07296769, 'Lf'=0.42160549, 'Rs'=0.99857272, 'Rf'=0.68626292, 'sd'=5)
+
+# we'll get the schedule from our example data set:
+load('data/tworatedata.rda')
+baseline <- function(reachvector,blidx) reachvector - mean(reachvector[blidx], na.rm=TRUE)
+tworatedata[,4:ncol(tworatedata)] <- apply(tworatedata[,4:ncol(tworatedata)], FUN=baseline, MARGIN=c(2), blidx=c(17:32))
+schedule <- tworatedata$schedule
+```
+
+Now we're ready to run the model function:
+
+```{r}
+model <- twoRateModel(par=par, schedule=schedule, iterations = 100)
+head(model)
+```
+
+The first thing we should notice is that on the first trial, the model output is not zero, and consequently, the slow and fast process on the next trial are not zero either.
+
+And we can plot the model:
+
+```{r}
+reaches <- apply(tworatedata[4:ncol(tworatedata)], FUN=mean, MARGIN=c(1), na.rm=TRUE)
+plot(reaches,type='l',col='#333333',xlab='trial',ylab='reach deviation [deg]',xlim=c(0,165),ylim=c(-35,35),bty='n',ax=F)
+lines(c(1,33,33,133,133,145,145),c(0,0,30,30,-30,-30,0),col='#AAAAAA')
+lines(c(145,164),c(0,0),col='#AAAAAA',lty=2)
+lines(model$slow_m,col='blue')
+lines(model$fast_m,col='red')
+lines(model$total_m,col='purple')
+axis(1,c(1,32,132,144,164),las=2)
+axis(2,c(-30,-15,0,15,30))
+```
+
+Are the standard deviations of the model's total output not simply the same as the standard deviation execution noise parameter?
+
+```{r}
+t.test(model$total_s, mu=5)
+```
+
+No, not really. Is that an indication that it makes sense to implement it this way?
+
+Either way, while this is pretty neat, two things are not right yet.
+
+First, this approach doesn't really work on group average data (this is where the non-noisy model is actually fine). It can work to model individual noise though, so we need individual participants. That is easy: we grab one column of the example data, not the average.
+
+Second, this was not fitted. How do we fit this? I'm thinking of optimizing the probability denisty of the data given the mean and standard deviation of the model.
+
+First step, let's get one participant's data:
+
+```{r}
+p5 <- tworatedata$p005
+```
+
+There are NA's in our data, but that should be OK.
+
+Now we need a new likelihood function:
+
+```{r}
+twoRateLikelihood <- function(par, schedule, reaches, checkStability=FALSE, iterations=30) {
   
   lowLikelihood <- 0
   
@@ -100,38 +190,105 @@ twoRateLikelihood <- function(par, schedule, reaches, checkStability=FALSE) {
     
   }
   
-  # notice that SD comes from par, not reaches:
-  pd <- dnorm((twoRateModel(par, schedule)$total - reaches), mean=0, sd=par['sd'])
-  #pd <- pd / dnorm(0, mean=0, sd=par['sd']) # applying this normalization makes an extremely large sd optimal
-    
-  return( prod( pd^(1/length(reaches)), na.rm=T ) )
+  model <- twoRateModel(par, schedule, iterations)
+
+  # the likelihood of the data given the model:
+  return( prod( dnorm((model$total_m - reaches), mean=0, sd=model$total_s)^(1/length(schedule)), na.rm=TRUE ) )
   
 } 
 ```
 
-Since SD is part of the par function, it will fitted by `optimx()`. What are good starting values? In this case, we'll take the sd of the first 32 trials, the last 32 of training, and the last 10 in the error clamps, as a starting point, as well as some values around that.
+Let's try this likelihood function on our participant 5, with the parameters from the group:
 
 ```{r}
+for (x in c(1:5)) {
+  L <- twoRateLikelihood( 
+                          par = par,
+                          schedule = schedule,
+                          reaches = p5,
+  )
+  print(L)
+}
+```
 
-nvals <- 6
+All those likelihoods are in the ballpark range of what we'd expect, with parameters that are not fitted to the particular participant but that do work as they are fitted to the group. The likelihoods are all different, as we're no longer able to get the exact same result on every iteration. So this makes sense.
 
+Now, let's actually fit the model. We will do grid search, but we'll do it in two steps.
+- First we'll use a minimum number of iterations (30), and we'll set the noise to a value close to the motor output noise of the participant (this may underestimate the motor noise, but should be ballpark OK).
+- In the second step, a bunch of the best ones get another grid search, but now with noise added.
+- Third, the best of those will actually be fitted.
+
+Let's get an estimate of motor output noise:
+
+```{r}
+sigma <- sd(c(
+              p5[155:164]-mean(p[155:164], na.rm=TRUE),
+              p5[1:10]-mean(p5[1:10],na.rm=TRUE) 
+              ), na.rm=TRUE)
+```
+
+Let's set up the global search grid, and do the first step of grid search:
+
+```{r}
+nvals <- 9
 parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
-
-noise <- sd(c( reaches[1:32]-mean(reaches[1:32], na.rm=T),
-               reaches[101:132]-mean(reaches[101:132], na.rm=T),
-               reaches[155:164]-mean(reaches[155:164], na.rm=T) 
-              )
-            )
 
 searchgrid <- expand.grid('Ls'=parvals,
                           'Lf'=parvals,
                           'Rs'=parvals,
                           'Rf'=parvals,
-                          'sd'=noise * parvals * 2)
+                          'sd'=sigma*1.5)
 
 # evaluate starting positions:
 Likelihoods <- apply(searchgrid, FUN=twoRateLikelihood, MARGIN=c(1), schedule=schedule, reaches=reaches, checkStability=TRUE)
+```
 
+We'll get the best half (but no more than 50) as starting points for the next step in grid search:
+
+```{r}
+num.best <- min(25, floor(length(which(Likelihoods > 0))/2))
+best.idx <- order(Likelihoods, decreasing = TRUE)[1:num.best]
+```
+
+Now, we'll pick those and expand the search to include a bunch a sd's, and we'll increase the number of iterations:
+
+```{r}
+nvals <- 15
+sdvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals) * 3 * sigma
+
+overall.grid <- NA
+
+for (idx in best.idx) {
+  
+  idx.searchgrid <- expand.grid('Ls'=searchgrid$Ls[idx],
+                                'Lf'=searchgrid$Lf[idx],
+                                'Rs'=searchgrid$Rs[idx],
+                                'Rf'=searchgrid$Rf[idx],
+                                'sd'=sdvals
+                                )
+  
+  idx.L <- apply(idx.searchgrid, FUN=twoRateLikelihood, MARGIN=c(1), schedule=schedule, reaches=reaches, checkStability=TRUE, iterations=50)
+  
+  # preserve the best one:
+  idx.searchgrid$Likelihood <- idx.L
+  
+  if (is.data.frame(overall.grid)) {
+    overall.grid <- rbind(overall.grid, idx.searchgrid[order(idx.L, decreasing = TRUE)[1],])
+  } else {
+    overall.grid <- idx.searchgrid[order(idx.L, decreasing = TRUE)[1],]
+  }
+}
+```
+
+So now we have 25 reasonable starting positions, but we will only really fit a smaller number of them, for now: the top 5. We'll remove the likelihood values as they are not parameters for optimx to fiddle with.
+
+```{r}
+topgrid <- overall.grid[order(overall.grid$Likelihood, decreasing = TRUE)[1:5],c(1:5)]
+```
+
+Now we can actually let optim fit those models, and here we'll use even more iterations.
+
+```{r}
 # we need to tell optimx to maximize the likelihood:
 library(optimx)
 
@@ -141,7 +298,7 @@ control$maximize <- TRUE
 
 # run optimx on the best starting positions:
 allfits <- do.call("rbind",
-                   apply( searchgrid[order(Likelihoods, decreasing = T)[1:10],],
+                   apply( topgrid,
                           MARGIN=c(1),
                           FUN=optimx,
                           fn=twoRateLikelihood,
@@ -151,191 +308,16 @@ allfits <- do.call("rbind",
                           schedule=schedule,
                           reaches=reaches,
                           checkStability=TRUE,
+                          iterations=250,
                           control=control ) )
 
+print(allfits)
+```
+
+Now, we pick the winning parameters:
+
+```{r}
 # pick the best fit:
 win <- allfits[order(allfits$value, decreasing = T)[1],]
-print(par <- unlist(win[,1:6]))
+print(par <- unlist(win[,1:5]))
 ```
-
-Those values are very close to the previous fit: the first 3 decimals of each term are the same. The standard deviation the model finds is a bit larger than what we guessed from the stable parts of the data (1.971 instead of 1.512) but there are several possible explanations for this. For example, it may be that the model is not a full account of the behavior, that is, there are some processes that affect behavior, but are not modeled, so that there are some systematic differences between model and behavior, which are captured by an increased noise term. Also, while we only used the more or less stable parts of the behavior to start estimating the noise term, this noise may actually be higher when behavior is changing.
-
-What is also happening is that the likelihood is higher for this fit than previously. Since the noise we calculated for the data was 6.75 and here we only get 1.971, this might be expected. But, why is the noise estimate here so much lower than that of the whole dataset? Well, we based the noise here on the standard deviation of the _average_ reaches, while originally, we used the whole dataset. We could also calculate the likelihood of all data points when fitting the model, instead of the average. This would require a re-worked likelihood function, but should get the sd estimate closer to what we calculated, and then also the likelihood. The solution should stay pretty close.
-
-## Individual participants
-
-In this example we can no longer compare the results to the group fit, since we will fit the model to one individual participant's reaches using likelihoods and including the noise term in the model.
-
-```{r}
-reaches3 <- tworatedata$p015
-print(reaches3)
-```
-
-As you can see there are some NAs in the data, and I went back now to add `na.rm=T` as argument to the `prod()` function used in the likelihood function. Otherwise, everything seemed to be able to handle that.
-
-We can just use the model and likelihood functions from above, and can go straight to fitting. But we'll do the gridsearch part in a separate chunk of code now.
-
-```{r}
-nvals <- 6
-
-parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
-
-noise <- sd(c( reaches3[1:32]-mean(reaches3[1:32], na.rm=T),
-               reaches3[101:132]-mean(reaches3[101:132], na.rm=T),
-               reaches3[155:164]-mean(reaches3[155:164], na.rm=T) 
-              ),
-            na.rm=TRUE
-            )
-
-searchgrid <- expand.grid('Ls'=parvals,
-                          'Lf'=parvals,
-                          'Rs'=parvals,
-                          'Rf'=parvals,
-                          'sd'=noise * parvals * 2)
-
-# evaluate starting positions:
-Likelihoods <- apply(searchgrid, FUN=twoRateLikelihood, MARGIN=c(1), schedule=schedule, reaches=reaches3, checkStability=TRUE)
-print(noise)
-print(noise * parvals * 2)
-```
-
-As you can see the noise for an individual participant's data is estimated larger than that of the group, as it should be. These seem reasonable numbers, so we'll continue.
-
-```{r}
-# we need to tell optimx to maximize the likelihood:
-library(optimx)
-
-control <- list()
-control$maximize <- TRUE
-#control$fnscale <- -1 # do not use together with maximize
-
-# run optimx on the best starting positions:
-allfits <- do.call("rbind",
-                   apply( searchgrid[order(Likelihoods, decreasing = T)[1:10],],
-                          MARGIN=c(1),
-                          FUN=optimx,
-                          fn=twoRateLikelihood,
-                          method='L-BFGS-B',
-                          lower=c(0,0,0,0,0),
-                          upper=c(1,1,1,1,Inf),
-                          schedule=schedule,
-                          reaches=reaches3,
-                          checkStability=TRUE,
-                          control=control ) )
-
-# pick the best fit:
-win <- allfits[order(allfits$value, decreasing = T)[1],]
-print(par <- unlist(win[,1:6]))
-```
-
-Again, the standard deviation from the fit is larger than our initial estimate. Both noise values are more like that of the whole data set though, and consequently, so is the likelihood. But how well does the solution match that of the MSE-based approach? We'll quickly reimplement that here to see.
-
-## Comparison with error-based solution
-
-The model function remains the same, but instead of a likelihood function, we'll use an MSE function:
-
-```{r}
-twoRateMSE <- function(par, schedule, reaches, checkStability=TRUE) {
-  
-  # another `na.rm=T` has to be added here, on the mean of the reaches:
-  bigError <- mean((schedule-mean(reaches, na.rm=T))^2, na.rm=TRUE) * 2
-  
-  Rf = par["Rf"];
-  Rs = par["Rs"];
-  Lf = par["Lf"];
-  Ls = par["Ls"];
-
-  # learning and retention rates of the fast and slow process are constrained:
-  if (Ls > Lf) {
-    return(bigError)
-  }
-  if (Rs < Rf) {
-    return(bigError)
-  }
-  
-  # my own constraint:
-  # if ((par['Ls']+par['Lf']) > 1) {
-  #   return(lowLikelihood)
-  # }
-  
-  if (checkStability) {
-    
-    # stability constraints:
-    if ( ( ( (Rf - Lf) * (Rs - Ls) ) - (Lf * Ls)) <= 0 ) {
-      return(bigError)
-    }
-    
-    p <- Rf - Lf - Rs + Ls
-    q <- ( p^2 + (4 * Lf * Ls) )
-    if ( ((Rf - Lf + Rs - Ls) + (q^0.5)) >= 2 ) {
-      return(bigError)
-    }
-    
-  }
-  return( mean((twoRateModel(par, schedule)$total - reaches)^2, na.rm=TRUE) )
-  
-}
-```
-
-And we'll do gridsearch and optimization:
-
-```{r}
-nvals <- 6
-parvals <- seq(1/nvals/2,1-(1/nvals/2),1/nvals)
-
-searchgrid <- expand.grid('Ls'=parvals,
-                          'Lf'=parvals,
-                          'Rs'=parvals,
-                          'Rf'=parvals
-                          )
-
-# evaluate starting positions:
-MSEs <- apply(searchgrid, FUN=twoRateMSE, MARGIN=c(1), schedule=schedule, reaches=reaches3, checkStability=TRUE)
-
-control$maximize <- FALSE
-
-# run optimx on the best starting positions:
-allMSEfits <- do.call("rbind",
-                   apply( searchgrid[order(MSEs, decreasing = F)[1:10],],
-                          MARGIN=c(1),
-                          FUN=optimx,
-                          fn=twoRateMSE,
-                          method='L-BFGS-B',
-                          lower=c(0,0,0,0),
-                          upper=c(1,1,1,1),
-                          schedule=schedule,
-                          reaches=reaches3,
-                          checkStability=TRUE,
-                          control=control
-                          ) )
-
-# pick the best fit:
-MSEwin <- allMSEfits[order(allMSEfits$value, decreasing = F)[1],]
-print(parMSE <- unlist(MSEwin[,1:5]))
-```
-
-And what was the likelihood-based fit again?
-
-```{r}
-print(par)
-```
-
-The solution is very close, but not as close as that for the whole group. So while this method is not identical to an MSE-based fit (and there may be better ones out there), it allows getting the likelihood for an individual participant, even when we don't know the noise at each trial, and are unsure how to estimate the noise across trials before knowing the model solution. 
-
-Another way to do it, is to first fit the model based on MSE, and then get the noise from that. Since we already have the MSE-based fit, that should be easy:
-
-```{r}
-MSEmodel <- twoRateModel(parMSE, schedule)
-print(noise3 <- sd(MSEmodel$total - reaches3, na.rm=T))
-```
-
-This is lower than we fitted above. And will probably result in a different likelihood (probably a bit higher):
-
-```{r}
-parMSE['sd'] <- noise3
-print(MSE_lik3 <- twoRateLikelihood(parMSE, schedule, reaches3, checkStability=TRUE))
-```
-
-Yes indeed. Which value is closer to the truth? As long as you use the same method for all your fits, the relative likelihoods should stay in the same order for your models.
-
-Puzzling is why the method above doesn't find that lower noise to increase the likelihood. Maybe that is worrying after all...
