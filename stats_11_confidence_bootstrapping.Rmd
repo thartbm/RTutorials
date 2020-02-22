@@ -43,14 +43,14 @@ The function `pt()` allows plotting the shape of the distribution as you may rem
 
 ```{r tdist, fig.width=8, fig.height=4}
 df <- 14
-q <- seq(-3,3,0.1)
-p <- seq(.005,.995,.01)
+q <- seq(-4,4,0.1)
+p <- seq(.001,.999,.001)
 par(mfrow=c(1,2))
 plot(q,dt(x=q,df=df),type='l',bty='n')
 plot(p,qt(p,df=df,lower.tail = T),type='l',bty='n') # try switching lower.tail to FALSE
 ```
 
-The first plot shows the probability density over the quantiles. The second plot shows quantiles over cumulative probabilities. We can use the latter to obtain a z-score (or quantile) that matches the part of the distribution we consider as the interval of confidence.
+The first plot shows the probability density over the quantiles. The second plot shows quantiles over cumulative probabilities. We can use the latter to obtain a z-score (or quantile) that matches the part of the distribution we consider as the interval of confidence (usually 95% of the distribution). Here is code for that:
 
 ```{r}
 # we'll get a 95% confidence interval
