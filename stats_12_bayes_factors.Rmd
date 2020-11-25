@@ -1,11 +1,12 @@
 ---
-title: 'Bayes Factors'
+title: "Bayes Factors"
+author: "Marius 't Hart"
 output:
+  html_notebook: default
+  word_document: default
   pdf_document: default
   html_document:
     df_print: paged
-  html_notebook: default
-author: Raphael Gastrock
 ---
 
 ```{r setup, cache=FALSE, include=FALSE}
@@ -15,19 +16,25 @@ opts_chunk$set(comment='', eval=FALSE)
 
 Recently the Null-Hypothesis Testing Statistical framework (NHST) has received some bad press, and part of the scientific community is pushing for Bayesian statistics instead. We should at least learn the basics and be able to read papers that use them. In this tutorial we will explore one of the simpler ones: Bayes Factors.
 
+However, a p-value expresses the probability of observing this data given that the null-hypothesis is true. This is a somewhat problematic statistic because the definition does not include what we actually care about: the alternative hypothesis. What we'd like to know is: the probability that our alternative hypothesis is true given the data.
+
 Bayes Factors do use a null hypothesis and an alternative hypothesis as well, and it seems to me they will usually be related to NHST stats.
 
-The classic Bayes formula goes like this:
+# Bayes' theorem
+
+First, let's look at the classic Bayes formula. It goes like this:
 
 $p(A) \cdot \frac{p(B|A)}{p(B)} = p(A|B)$
 
-That is: the prior multiplied by the likelihood equals the posterior. The prior is our prior belief in A: the probability ($p()$) with which we think A is true, before seeing any evidence. The posterior is the probability that A _given_ B ($A|B$), that is, it represents our updated belief that A is true, after taking into account some new data (B).
+That is: the prior ($p(A)$) multiplied by the likelihood equals the posterior ($p(A|B)$). The prior is our prior belief in A: the probability ($p()$) with which we think A is true, before seeing any evidence. The posterior is the probability that A _given_ B ($A|B$), that is, it represents our updated belief that A is true, after taking into account some new data (B).
 
-The likelihood term is a little more complex. Sometimes you will not see the normalization by dividing by the probability of B occurring regardless of anything else (it's "base rate"). I'm not always sure why, but it could be because it is fully unknown, or because it makes no sense in the experiment.
+The likelihood term is a little more complex. Sometimes you will not see the normalization by dividing by the probability of B occurring regardless of anything else (its' "base rate"). I'm not always sure why, but it could be because it is fully unknown, or because it makes no sense in the experiment.
 
 Either way, the whole term gives you the probability of observing the data (B) given the hypothesis (A), normalized by the base rate of B's occurrence. So if B is very rare, but happens a lot in your experiment (and this is predicted by your hypothesis), then your belief in the hypothesis will be increased. However, if B is very common, or occurs at it's base rate, nothing much may change in your degree of belief in A. Your belief in A can also decrease, if B occurs less often than it's base rate.
 
 So this normalized likelihood term expresses the strength of the evidence that the data provides for the hypothesis: how much does it change our belief in the hypothesis? Note that our posterior  belief is hard to get to 100% and that it also depends on our prior belief. Unlikely claims require very strong evidence!
+
+# Bayes Factor
 
 It seems to me that the Bayes' Factor is highly related to this normalized likelihood term. Here's a formula that includes the Bayes Factor, prior times Bayes Factor equals posterior:
 
@@ -37,6 +44,112 @@ Here, we weight two hypotheses that might sound familiar: the null hypothesis ($
 
 $BF_{10} = \frac{1}{BF_{01}}$
 
-Notice that a lot of why it is hard to learn NHST is that in NHST we calculate p-values: the probability of observing the data given that the null-hypothesis is true. But who cares? We don't need probabilities of observing data... we need probabilities of a hypothesis being true or false. More specifically, we also don't care about the null-hypothesis at all. Instead, we want to know if the alternative hypothesis is true given the data, right? Now look at the posterior of the above formula. It weights the probability of the alternative hypothesis and the null hypothesis being true given the data. How awesome is that!
+Notice that a lot of why it is hard to learn NHST is that in NHST we calculate p-values: the probability of observing the data given that the null-hypothesis is true (as I said before). But who cares? We don't need probabilities of observing data... we need probabilities of a hypothesis being true or false. More specifically, we also don't care about the null-hypothesis at all. Instead, we want to know if the alternative hypothesis is true given the data, right? Now look at the posterior of the above formula. It weights the probability of the alternative hypothesis and the null hypothesis being true given the data. How awesome is that!
 
-More importantly, the Bayes Factor is a number between 0 and $\infty$, and when it is 1, the data supports both hypotheses equally well. So in general, when you find that, you should still report it, but then do another experiment that approaches it in a different way.
+The fraction $\frac{p(D | H_1)}{p(D | H_0)}$ is the Bayes Factor and basically it is a number that tells you how much you have to adjust your prior beliefs based on the new data to get your posterior belief. And even if you can't really put a number on your prior belief, you can often still calculate the Bayes Factor. In that case, you can't tell people what their posterior belief should be, but you can tell them which of two hypotheses is favoured by your data. 
+
+The Bayes Factor is a number between 0 and $\infty$, and when it is 1, the data supports both hypotheses equally well (your posterior beliefs would be equal to your prior beliefs). So in general, when you find that, your data does not allow making a decision. You should still report it, but then perhaps do another experiment that approaches it in a different way.
+
+Here is how people often interpret the values of Bayes Factors:
+
+| Bayes Factor | What it means               |
+|--------------|-----------------------------|
+| > 100        | Extreme evidence for H1     |
+| 30 - 100     | Very strong evidence for H1 |
+| 10 - 30      | Strong evidence for H1      |
+| 3 - 10       | Moderate evidence for H1    |
+| 1 - 3        | Anecdotal evidence for H1   |
+| 1            | No evidence                 |
+| 1/3 - 1      | Anecdotal evidence for H0   |
+| 1/10 - 1/3   | Moderate evidence for H0    |
+| 1/30 - 1/10	 | Strong evidence for H0      |
+| 1/100 - 1/30 | Very strong evidence for H0 |
+| < 1/100      | Extreme evidence for H0     |
+
+We need some actual Bayes Factors to see what this would mean.
+
+# A simple example
+
+For this we will use some data from [Gastrock et al., 2020](https://doi.org/10.1038/s41598-020-76940-3) from a control group, and we simplify the data a bit.
+
+```{r}
+RAE <- read.csv('data/Gastrock_etal_2020_control_nocursor.csv', stringsAsFactors = F)
+RAE <- aggregate(cbind(aligned, exclusive, inclusive) ~ participant, data=RAE, FUN=mean)
+```
+
+This data is from Figure 5, and has the deviations of no-cursor reaches from the target (in degrees angle) for the control group (in orange), with the reach deviations from the baseline session in the `aligned` column, and after adaptation the reaches without strategy in the `exclusive` column and those with strategy in the `inclusive` column:
+
+```{r}
+str(RAE)
+```
+
+We will use the appropriately named `BayseFactor` package to test two questions, and compare it with what a t-test would say.
+
+```{r}
+#install.packages('BayesFactor')
+library('BayesFactor')
+```
+
+First we want to see if, even "without strategy" the reach deviations have changed relative to baseline. The first thing people would do is run a t-test:
+
+```{r}
+t.test(RAE$aligned, RAE$exclusive, paired=T)
+```
+
+This shows a difference, so the training has an effect. Let's see what the Bayes factor is:
+
+```{r}
+ttestBF(RAE$aligned, RAE$exclusive, paired=T)
+```
+
+That really large number (309678218) is the Bayes Factor and it clearly shows that there was a difference between the two sessions. Using the table above, we could report this as:
+
+_"There is extreme evidence for an effect of training session on reach deviations ($BF_{10} = 3.1 \cdot 10^8$)."_
+
+Let's also see if there is a difference between inclusive and exclusive reach deviations:
+
+```{r}
+t.test(RAE$inclusive, RAE$exclusive, paired=T)
+```
+
+Would you say that is a "trend"? We shouldn't. In NHST, you have to stick to the alpha level (assumed to be 0.05 unless otherwise specified), so what this means is that we can not reject the null-hypothesis. But this is rather indecisive: does that mean that the reach deviations are the same in the two conditions? (i.e. the null-hypothesis is true) or does it mean that there is some, albeit weak, evidence for the alternative hypothesis?
+
+Let's see what the Bayes Factor says.
+
+```{r}
+ttestBF(RAE$inclusive, RAE$exclusive, paired=T)
+```
+
+The Bayes Factor is 1.0257 here... that's pretty much 1, so we could conclude:
+
+_"This data provides little to no evidence to say if there is a difference between include and exclude reach deviations ($BF_{10}=1.03$)."_
+
+# Confirming the null-hypothesis
+
+Of course, a cooler example would be if the data actually supports the null hypothesis. For this we will look at some artificial data:
+
+```{r}
+set.seed(1337)
+one <- rnorm(n=100) # 100 numbers drawn from a normal distribution
+two <- one + (rnorm(n=100)/10) # those numbers, but slightly changed
+```
+
+
+A t-test would not reject the null-hypothesis:
+
+```{r}
+t.test(one, two, paired=T)
+```
+
+But a Bayes Factor would say there actually is evidence _for_ the null-hypothesis:
+
+```{r}
+ttestBF(one, two, paired=T)
+```
+
+This Bayes Factor of 0.12 is in between 1/10 and 1/3, so we could say this:
+
+_"There is moderate evidence that the two sets of numbers are drawn from the same distribution ($BF_{10}=0.12$)"_
+
+Classical statistics can't make the distinction between the two situations, but Bayes Factors can! If we look around in the Bayes Factor package it also has functions to get Bayes Factors for ANOVA-like situations, which are a little more complicated, but spit out the same Bayes Factors that can be interpreted the same way.
+
