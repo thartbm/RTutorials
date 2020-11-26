@@ -2,9 +2,9 @@
 title: "Bayes Factors"
 author: "Marius 't Hart"
 output:
-  html_notebook: default
-  word_document: default
   pdf_document: default
+  word_document: default
+  html_notebook: default
   html_document:
     df_print: paged
 ---
@@ -104,7 +104,7 @@ ttestBF(RAE$aligned, RAE$exclusive, paired=T)
 
 That really large number (309678218) is the Bayes Factor and it clearly shows that there was a difference between the two sessions. Using the table above, we could report this as:
 
-_"There is extreme evidence for an effect of training session on reach deviations ($BF_{10} = 3.1 \cdot 10^8$)."_
+> _"There is extreme evidence for an effect of training session on reach deviations ($BF_{10} = 3.1 \cdot 10^8$)."_
 
 Let's also see if there is a difference between inclusive and exclusive reach deviations:
 
@@ -122,7 +122,7 @@ ttestBF(RAE$inclusive, RAE$exclusive, paired=T)
 
 The Bayes Factor is 1.0257 here... that's pretty much 1, so we could conclude:
 
-_"This data provides little to no evidence to say if there is a difference between include and exclude reach deviations ($BF_{10}=1.03$)."_
+> _"This data provides little to no evidence to say if there is a difference between include and exclude reach deviations ($BF_{10}=1.03$)."_
 
 # Confirming the null-hypothesis
 
@@ -149,7 +149,10 @@ ttestBF(one, two, paired=T)
 
 This Bayes Factor of 0.12 is in between 1/10 and 1/3, so we could say this:
 
-_"There is moderate evidence that the two sets of numbers are drawn from the same distribution ($BF_{10}=0.12$)"_
+> _"There is moderate evidence that the two sets of numbers are drawn from the same distribution ($BF_{10}=0.12$)"_
 
 Classical statistics can't make the distinction between the two situations, but Bayes Factors can! If we look around in the Bayes Factor package it also has functions to get Bayes Factors for ANOVA-like situations, which are a little more complicated, but spit out the same Bayes Factors that can be interpreted the same way.
 
+# JASP
+
+Perhaps it is easier to first try some Bayesian statistics in a nice GUI. [JASP](https://jasp-stats.org) is free, open source software that implements many NHST analyses along with Bayesian versions of them. They also provide many guides on [this page](https://jasp-stats.org/jasp-materials/), including data sets to work through examples.
