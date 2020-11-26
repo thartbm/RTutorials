@@ -83,6 +83,18 @@ This data is from Figure 5, and has the deviations of no-cursor reaches from the
 str(RAE)
 ```
 
+And let's have some quick summary stats:
+
+```{r}
+summary(RAE)
+```
+
+Aligned responses are closer to zero, and exclusive and inclusive are very similar, but possibly inclusive is a bit higher than exclusive. This should also be visible in a summary plot:
+
+```{r}
+boxplot(RAE[c('aligned','exclusive','inclusive')])
+```
+
 We will use the appropriately named `BayseFactor` package to test two questions, and compare it with what a t-test would say.
 
 ```{r}
@@ -126,32 +138,40 @@ The Bayes Factor is 1.0257 here... that's pretty much 1, so we could conclude:
 
 # Confirming the null-hypothesis
 
-Of course, a cooler example would be if the data actually supports the null hypothesis. For this we will look at some artificial data:
+Of course, a cooler example would be if the data actually supports the null hypothesis. I don't have example data that shows this, so we'll cheat:
 
 ```{r}
-set.seed(1337)
-one <- rnorm(n=100) # 100 numbers drawn from a normal distribution
-two <- one + (rnorm(n=100)/10) # those numbers, but slightly changed
+zero <- RAE$aligned - mean(RAE$aligned)
+print(zero)
 ```
 
+The vector `zero` should now have a mean of exactly 0, so that the null-hypothesis has to be true.
 
-A t-test would not reject the null-hypothesis:
+A t-test however, will simply _not reject the null hypothesis_ which is different from confirming it:
 
 ```{r}
-t.test(one, two, paired=T)
+t.test(zero)
 ```
+
+If the p-value is below alpha (0.05) we _reject_ the null hypothesis, but we can only either reject the null hypothesis or not reject it.
 
 But a Bayes Factor would say there actually is evidence _for_ the null-hypothesis:
 
 ```{r}
-ttestBF(one, two, paired=T)
+ttestBF(zero)
 ```
 
-This Bayes Factor of 0.12 is in between 1/10 and 1/3, so we could say this:
+This Bayes Factor of 0.23 is in between 1/10 and 1/3, so we could say this:
 
-> _"There is moderate evidence that the two sets of numbers are drawn from the same distribution ($BF_{10}=0.12$)"_
+> _"There is moderate evidence that the vector has a mean of zero ($BF_{10}=0.23$)"_
 
-Classical statistics can't make the distinction between the two situations, but Bayes Factors can! If we look around in the Bayes Factor package it also has functions to get Bayes Factors for ANOVA-like situations, which are a little more complicated, but spit out the same Bayes Factors that can be interpreted the same way.
+The reason the Bayes Factor isn't lower is that there are "only" 20 observations with still quite a lot of variance.
+
+Classical statistics can't make the distinction between the two situations: "no evidence" vs. "null-hypothesis is true", but Bayes Factors can! If we look around in the Bayes Factor package it also has functions to get Bayes Factors for ANOVA-like situations, which are a little more complicated, but spit out the same Bayes Factors that can be interpreted the same way.
+
+# You have options
+
+There are different kind of options in `ttestBF()` compared to your regular `t.test()` that have to do with the specifics of Bayesian statistics. For example, you can specify a prior instead using the default one, or get samples from the posterior distribution.
 
 # JASP
 
