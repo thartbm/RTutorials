@@ -72,8 +72,10 @@ Let's see what happens if we _do_ do an ANOVA, using the ez package:
 
 ```{r error=TRUE}
 #install.packages('ez')
-library(ez)
-ezANOVA(dv=taperror_deg, wid=participant, within=c(rotated_b, passive_b, handangle_deg), data=exp)
+# library(ez)
+# ezANOVA(dv=taperror_deg, wid=participant, within=c(rotated_b, passive_b, handangle_deg), data=exp)
+library(afex)
+afex::aov_ez(dv='taperror_deg', id='participant', within=c('rotated_b', 'passive_b', 'handangle_deg'), data=exp)
 ```
 
 That doesn't work at all. Because of the missing values (NAs) in taperror_deg:
