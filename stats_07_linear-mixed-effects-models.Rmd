@@ -78,7 +78,7 @@ library(afex)
 afex::aov_ez(dv='taperror_deg', id='participant', within=c('rotated_b', 'passive_b', 'handangle_deg'), data=exp)
 ```
 
-That doesn't work at all. Because of the missing values (NAs) in taperror_deg:
+That throws a big error because of the missing values (NAs) in taperror_deg:
 
 ```{r}
 length(which(is.na(exp$taperror_deg)))
